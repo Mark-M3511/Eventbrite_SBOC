@@ -1,0 +1,152 @@
+<?php
+
+/**
+ * @file
+ *  GMap install/uninstall routines.
+ */
+
+function eventbrite_sboc_schema(){
+  $schema['eventbrite_sboc_attendees'] = array(
+     'description' => 'Stores attendee information retreived through Eventbrite api',
+	 'fields' => array(
+	    'eid' => array(
+		   'description' => 'The primary identifier for records in this table.', 
+           'type' => 'serial', 
+           'unsigned' => TRUE, 
+           'not null' => TRUE,
+		),
+		'event_id' => array(
+		   'description' => 'The primary identifier for an Eventbrite event.', 
+           'type' => 'varchar', 
+           'length' => 20, 
+           'not null' => TRUE,
+		),
+		'attendee_id' => array(
+		   'description' => 'Eventbrite unique identifier per attendee.', 
+           'type' => 'int', 
+           'unsigned' => TRUE, 
+           'not null' => TRUE,
+		),
+		'order_id' => array(
+		   'description' => 'Eventbrite unique identifier per order.', 
+           'type' => 'int', 
+           'unsigned' => TRUE, 
+           'not null' => TRUE,
+		),
+		'create_date' => array(
+		   'description' => 'Date and time attendee record was created in this table.',          
+           'type' => 'datetime',
+           'mysql_type' => 'DATETIME',
+           'pgsql_type' => 'timestamp without time zone', 
+           'sqlite_type' => 'VARCHAR', 
+           'sqlsrv_type' => 'smalldatetime',		   
+           'not null' => TRUE,
+		),	
+		'email_address' => array(
+		   'description' => 'Email address of attendee.', 
+           'type' => 'varchar',  
+           'length' => 100,        
+           'not null' => TRUE,
+		),
+		'last_name' => array(
+		   'description' => 'Last name of attendee', 
+           'type' => 'varchar',  
+           'length' => 50,        
+           'not null' => TRUE,
+		),
+		'first_name' => array(
+		   'description' => 'First name of attendee', 
+           'type' => 'varchar',  
+           'length' => 50,        
+           'not null' => TRUE,
+		),
+		'category' => array(
+		   'description' => 'Category attendee will compete in',            
+           'type' => 'varchar', 
+           'length' => 2,      		   
+           'not null' => TRUE,
+		),
+		'order_type' => array(
+		   'description' => 'Type of order(e.g. Paypal)',            
+           'type' => 'varchar', 
+           'length' => 50,      		   
+           'not null' => TRUE,
+		),
+		'email_sent' => array(
+		   'description' => 'Indicates status of first email contact',            
+           'type' => 'int',             		   
+           'not null' => TRUE,
+		   'default' => 0,
+		),
+		'email_send_date' => array(
+		   'description' => 'Date email was first sent',            
+           'type' => 'datetime',
+           'mysql_type' => 'DATETIME',
+           'pgsql_type' => 'timestamp without time zone', 
+           'sqlite_type' => 'VARCHAR', 
+           'sqlsrv_type' => 'smalldatetime',
+           'not null' => FALSE,              		             
+		),
+	 ),	
+	 'primary key' => array('eid'),
+	 'indexes' => array(
+      'eventbrite_sboc_attendee_id' => array('attendee_id'), 
+      'eventbrite_sboc_event_id' => array('event_id'),
+	  'eventbrite_sboc_order_id' => array('order_id'),
+    ), 
+  );
+
+  return $schema;
+} 
+ 
+/**
+ * Implementation of hook_uninstall().
+ */
+/* function gmap_uninstall() {
+ variable_del('gmap_method');
+} */
+
+/**
+ * Updates from 5.x-1.0alpha1 to 5.x-1.0.
+ * Do some tidying up of the settings.
+ */
+/* function gmap_update_5000() {
+  $ret = array();
+
+  $d = variable_get('gmap_default', array());
+
+  // Add the previous implicit baselayers back in.
+  if (!isset($d['baselayers'])) {
+    $d['baselayers'] = array(
+      // Default map type
+      'maptype' => isset($d['maptype']) ? $d['maptype'] : 'Map',
+      'Map' => 1,
+      'Satellite' => 1,
+      'Hybrid' => 1,
+      'Physical' => 0,
+    );
+  }
+
+  // Default maptype was moved into baselayers.
+  unset($d['maptype']);
+
+  // Determine the map type control that was in use.
+  if (!isset($d['mtc'])) {
+    // User had the notype behavior flag set.
+    if (!empty($d['behavior']['notype'])) {
+      $d['mtc'] = 'none';
+    }
+    else {
+      $d['mtc'] = 'standard';
+    }
+  }
+
+  // notype is gone, mtc is more generic.
+  if (isset($d['behavior']['notype'])) {
+    unset($d['behavior']['notype']);
+  }
+
+  variable_set('gmap_default', $d);
+  return $ret;
+} */
+

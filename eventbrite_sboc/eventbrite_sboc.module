@@ -1,0 +1,632 @@
+<?php
+/**
+ * @file
+ * eventbrite_sboc.module - manage sending purchased assets to SBOC registrants
+ */
+ 
+ /** defines **/
+ define('EVENTBRITE_BASE_URL', 'https://www.eventbrite.com/json/');
+ define('EVENTBRITE_SBOC_MAIL_TOKEN', 'eventbrite_sboc_mail_contact');
+ //define('EVENTBRITE_SBOC_LIST_SORT_ORDER', 'ASC');
+ define('EVENTBRITE_SBOC_LIST_SORT_ORDER', 'DESC');
+ define('EVENTBRITE_SBOC_EMAIL_SEND_LIMIT', 50); 
+ define('EVENTBRITE_SBOC_QUESTION_ID_CATEGORY', 2968673); //Contestant's Category (b.b. = born between)
+ define('EVENTBRITE_SBOC_QUESTION_ID_CHILD_LAST_NAME', 3007605);   // 3007605
+ define('EVENTBRITE_SBOC_QUESTION_ID_CHILD_FIRST_NAME', 3007609);	// 3007609
+ define('EVENTBRITE_SBOC_QUESTION_ID_REGION', 2970301);	// 2970301
+ define('EVENTBRITE_SBOC_REGISTRATION_AMT_STD', 28);
+ define('EVENTBRITE_SBOC_REGISTRATION_LOW_DATE',  date('Y-m-d',strtotime('yesterday')));
+ define('EVENTBRITE_SBOC_MAIL_KEY', 'send_manuals');
+ define('EVENTBRITE_SBOC_MODULE_NAME', 'eventbrite_sboc');
+ define('EVENTBRITE_SBOC_MODULE_API_AUTH_PATH', 'admin/config/system/eventbrite_sboc/api_auth');
+
+ 
+ /**
+ * Implementation of hook_help
+ */
+
+ function eventbrite_sboc_help($path, $arg) {
+    $output = '';
+	switch($path){
+		case 'admin/help#eventbrite_sboc':
+		  $output = '<p>'. t('Provides automatic email messaging services for SBOC for Eventbrite managed events.').'</p>';
+		  break;		
+		default:
+          break;		
+	}
+    return $output;
+ }
+ 
+ /**
+ * Implementation of hook_permission
+ */
+ function eventbrite_sboc_permission() {
+    $result = array(
+	  'administer ebsboc' => array(
+	     'title' => t('Configure Eventbrite SBOC'),
+		 'description' => t('Allow authorized users to configure the module for use'),
+	   ),
+	);
+	return $result;
+ }
+  
+ /**
+ * Implementation of hook_menu
+ */
+ function eventbrite_sboc_menu(){ 
+    // Admin menus below here.
+	
+	$items = array();
+	
+	$items['eventbrite_sboc/kickservice'] = array(
+	  'title' => 'Execute  ',
+	  'description' => 'Landing page for completed SBOC registration on Eventbrite',
+	  'type'=> MENU_CALLBACK|MENU_NORMAL_ITEM,
+	  'page callback' => '_eventbrite_sboc_kick_service',
+	  'access arguments' => array('administer ebsboc'),
+	);
+	
+	/********************************Administrative links below***********************************/
+	
+    $items['admin/config/system/eventbrite_sboc'] = array(
+	  'title' => 'Configure Eventbrite for SBOC',
+	  'description' => 'Enter Eventbrite API credentials and manage service preferences',
+	  'page callback' => 'drupal_get_form',
+	  'page arguments' => array('_eventbrite_sboc_config_form'),
+	  'access arguments' => array('administer ebsboc'),
+	  'file' => 'eventbrite_sboc_admin_form.inc',
+	  'file path' => drupal_get_path('module', 'eventbrite_sboc'). '/includes',	
+	  /* 'weight' => 30, */
+	);
+	
+	$items['admin/config/system/eventbrite_sboc/main'] = array(
+	   'title' => 'Configure Eventbrite SBOC',
+       'type' => MENU_DEFAULT_LOCAL_TASK,
+	);
+		
+	$items['admin/config/system/eventbrite_sboc/api_auth'] = array(
+		'title' => 'Authorization',
+		'type' =>  MENU_LOCAL_TASK,
+		'description' => 'Eventbrite API calls - Authentication (OAUTH)',		
+		'page callback' => '_eventbrite_sboc_authorization_api',
+		'access arguments' => array('administer ebsboc'),
+		'file' => 'eventbrite_sboc_admin_form.inc',
+	    'file path' => drupal_get_path('module', 'eventbrite_sboc'). '/includes',	
+		'weight' => 1,
+	);
+	
+	$items['admin/config/system/eventbrite_sboc/api_attendee_list/1'] = array(
+		'title' => 'Attendee List',
+		'type' =>  MENU_LOCAL_TASK | MENU_CALLBACK,
+		'description' => 'Eventbrite API calls - Attendee List',		
+		'page callback' => '_eventbrite_sboc_get_attendee_list',
+		'page arguments' => array(5),
+		'access arguments' => array('administer ebsboc'),
+		'file' => 'eventbrite_sboc_admin_form.inc',
+	    'file path' => drupal_get_path('module', 'eventbrite_sboc'). '/includes',	
+		'weight' => 2,
+	);
+	
+	$items['admin/config/system/eventbrite_sboc/email'] = array(
+		'title' => 'Email Contact',
+		'type' =>  MENU_LOCAL_TASK | MENU_CALLBACK,
+		'description' => 'Email Contact',
+		'page callback' => '_eventbrite_sboc_build_email_test_forms',
+		'access arguments' => array('administer ebsboc'),
+		'file' => 'eventbrite_sboc_admin_form.inc',
+	    'file path' => drupal_get_path('module', 'eventbrite_sboc'). '/includes',	
+		'weight' => 3,
+	);
+	
+	$items['admin/config/system/eventbrite_sboc/debug'] = array(
+		'title' => 'Debugging',
+		'type' =>  MENU_LOCAL_TASK | MENU_CALLBACK,
+		'description' => 'Set debugging options for this module',
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array('_eventbrite_sboc_debug_config_form'),
+		'access arguments' => array('administer ebsboc'),
+		'file' => 'eventbrite_sboc_admin_form.inc',
+	    'file path' => drupal_get_path('module', 'eventbrite_sboc'). '/includes',	
+		'weight' => 4,
+	);
+	
+	$items['eventbrite_sboc/logout'] = array(
+		'title' => 'Eventbrite Logout',
+		'type' =>  MENU_CALLBACK,
+		'description' => 'Logged out of Eventbrite',
+		'page callback' => '_eventbrite_sboc_api_logout',
+		'access arguments' => TRUE,
+	);
+	
+	return $items;
+ }
+ 
+ function eventbrite_sboc_cron(){
+   $queue = DrupalQueue::get('email_distribution');
+   $data = variable_get('site_mail', 'no-email@no-email-address.no-domain');
+   if (variable_get('eventbrite_sboc_email_send_option','test') == 'live'){
+     $data = '';
+   }	 
+   $queue->createItem($data);
+ }
+ 
+ function eventbrite_sboc_cron_queue_info(){
+   $queues['email_distribution'] = array(
+    'worker callback' => '_eventbrite_sboc_email_auto_sender',
+    'time' => 120,
+   );
+   return $queues;
+ }
+ 
+ function _eventbrite_sboc_email_auto_sender($data){ 
+    if (variable_get('eventbrite_sboc_app_state', 0) == 1) {
+       _eventbrite_sboc_get_attendee_list();
+	   _eventbrite_sboc_process_emails($data);
+    }else{
+	  watchdog(EVENTBRITE_SBOC_MODULE_NAME, t('Service is disabled'), array(), WATCHDOG_NOTICE);	 
+	}
+ }
+ 
+  function _eventbrite_sboc_kick_service($email=''){    
+    _eventbrite_sboc_get_attendee_list();
+	_eventbrite_sboc_process_emails($email);	
+ }
+ 
+ function eventbrite_sboc_theme($existing, $type, $theme, $path){
+    return array(
+	   'login_widget' => array (		
+			'template' => 'eventbrite_sboc_login',
+			'path' => drupal_get_path('module', 'eventbrite_sboc') .'/templates',
+	   ),
+	   'attendee_list' => array(
+	      'variables' => array('attendee_list' => NULL, 'attendee_list_count' => NULL),
+	   ),
+	);
+ }
+ 
+ function theme_attendee_list($variables){
+   $attendee_list_count = $variables['attendee_list_count'];
+   $attendee_list = $variables['attendee_list'];
+   $ra_attendee_list =  array(
+	  'attendee_list_count_line' => array(
+		 '#type' => 'markup',
+		 '#prefix' => '<p><strong>',
+		 '#markup' => format_string('Total registered attendees for this event on Eventbrite: @d', array('@d' => $attendee_list_count)),
+		 '#suffix' => '</strong></p>',
+       ),
+	   'attendee_list_table' => array(
+	      '#type' => 'markup', 
+		  '#markup' => $attendee_list,
+	   ),
+   );
+   $output = drupal_render($ra_attendee_list);
+   return $output;
+ }
+  
+ function _eventbrite_sboc_api_logout(){
+    global $user; 
+    _eventbrite_sboc_del_oauth_token();
+	if ($user && ($user->uid > 0) && (user_access('administer ebsboc'))){
+	   drupal_goto(EVENTBRITE_SBOC_MODULE_API_AUTH_PATH);
+	}	
+ }
+  
+ function _eventbrite_sboc_oauth_token(){
+    $output = Eventbrite::getAccessToken(); 
+	return (!empty($output) ? $output : '');
+ } 
+
+ function _eventbrite_sboc_get_oauth_token(){
+    return variable_get('eventbrite_sboc_oauth_token', _eventbrite_sboc_oauth_token());
+ }
+ 
+ function _eventbrite_sboc_set_oauth_token($eventbrite_sboc_oauth_token){
+    return variable_set('eventbrite_sboc_oauth_token', $eventbrite_sboc_oauth_token);
+ }
+ 
+ function _eventbrite_sboc_del_oauth_token(){
+    variable_del('eventbrite_sboc_oauth_token');
+ }
+
+ function _eventbrite_sboc_event_id(){    	
+  return variable_get('eventbrite_event_id', '');
+ }
+
+ function _eventbrite_sboc_api_key(){
+   return  variable_get('eventbrite_api_key', '');
+ }
+
+ function _eventbrite_sboc_api_user_key(){
+   return variable_get('eventbrite_api_user_key', '');
+ }
+ 
+ function _eventbrite_sboc_oauth_key(){
+   return variable_get('eventbrite_oauth_key', '');
+ }
+ 
+ function _eventbrite_sboc_api_user_email(){
+   return variable_get('eventbrite_sboc_api_user_email', '');
+ }
+ 
+ function _eventbrite_sboc_api_user_password(){
+   return variable_get('eventbrite_sboc_api_user_password', '');
+ }
+ 
+ function _eventbrite_sboc_private_files_dir($file_uri){
+   return realpath($file_uri);
+ }
+
+ function _eventbrite_sboc_authorization_api(){
+   $eventbrite_api_key =  _eventbrite_sboc_api_key();
+   $eventbrite_api_user_key = _eventbrite_sboc_api_user_key();
+   $eventbrite_oauth_key = _eventbrite_sboc_oauth_key();  
+   return theme('login_widget', array('eventbrite_api_key' => $eventbrite_api_key, 'eventbrite_oauth_key' =>     $eventbrite_oauth_key,));  
+ }
+
+ function _eventbrite_sboc_sort_attendees_by_id($a, $b){
+   $result = -1;
+   if ($a->attendee->id == $b->attendee->id){
+      $result = 0;
+   }
+   else {
+      if (EVENTBRITE_SBOC_LIST_SORT_ORDER == 'ASC'){
+        $result = ($a->attendee->id < $b->attendee->id) ? -1 : 1;
+	  }else{
+	    $result = ($a->attendee->id < $b->attendee->id) ? 1 : -1;
+	  }
+   }
+   return $result;
+ }
+
+ function _eventbrite_sboc_get_attendee_list($display_list = 0){
+   $result = array();  
+   $event_id = array('id' => _eventbrite_sboc_event_id());    
+   $eb_client = NULL;
+   
+   $auth_key = array(
+     'client_secret' => _eventbrite_sboc_oauth_key(),     
+	 'access_token' => NULL,
+	 'client_id' =>  _eventbrite_sboc_api_key(),
+	 'app_key' => _eventbrite_sboc_api_key(),
+	 'user_key' => _eventbrite_sboc_api_user_key(),
+    );
+   
+   $oauth_login_result = Eventbrite::OAuthLogin($auth_key, '_eventbrite_sboc_get_oauth_token', '_eventbrite_sboc_set_oauth_token', '_eventbrite_sboc_del_oauth_token');
+   
+   $auth_key['access_token'] = _eventbrite_sboc_get_oauth_token();
+   
+   if ($auth_key['access_token']){
+     $eb_client = new Eventbrite($auth_key); 
+   }else{
+	 $user_email = _eventbrite_sboc_api_user_email();
+	 $user_pwd =  _eventbrite_sboc_api_user_password();
+	 unset($auth_key['access_token']);
+	 $eb_client = new Eventbrite($auth_key, $user_email, $user_pwd);
+   }	 
+   $eb_attendee_list = $eb_client->event_list_attendees($event_id);
+      
+   usort($eb_attendee_list->attendees, "_eventbrite_sboc_sort_attendees_by_id");
+   _eventbrite_sboc_cache_attendee_list($eb_attendee_list->attendees);  
+   
+   if (arg(5) != NULL){
+     $display_list = (int)arg(5);
+   }
+      
+   _eventbrite_sboc_debug('_eventbrite_sboc_debug_lists', array('display_list' => $display_list, 'attendees' => $eb_attendee_list->attendees));
+   
+   $attendee_list = _eventbrite_sboc_display_attendee_list($_SESSION['attendees']);
+   return theme('attendee_list', array('attendee_list' => $attendee_list, 'attendee_list_count' => count($eb_attendee_list->attendees),));  
+ }
+ 
+ function _eventbrite_sboc_debug($user_func, $args = array()){
+    $debug_mode = variable_get('eventbrite_sboc_app_debug', 0);
+    if ($debug_mode){
+	  if (function_exists($user_func)){
+	    call_user_func_array($user_func, $args);
+	  }	
+	}
+ }
+ 
+ function _eventbrite_sboc_debug_lists($display_list, $attendees){
+    if ($display_list == 1 && module_exists('devel') && (variable_get('eventbrite_sboc_app_debug', 0) == 1)){
+      if (variable_get('eventbrite_sboc_app_full_eb_list_attendees', 0) == 1) {	
+        /*  dpm($eb_attendee_list->attendees); */
+		dpm($attendees);
+	  }
+	  // Debug only
+	  dpm($oauth_login_result);
+      dpm($_SESSION['attendees']);
+	  dpm($_SESSION['attendees_in_db']); 
+   }
+ }
+
+ function _eventbrite_sboc_cache_attendee_list($attendees){
+    $ctr = 0;
+	$_SESSION['attendees'] = array();
+	$_SESSION['attendees_in_db'] = _eventbrite_sboc_get_attendees_from_db();
+	foreach($attendees as $a){
+	  if (substr($a->attendee->created, 0, 10) >= EVENTBRITE_SBOC_REGISTRATION_LOW_DATE && !_eventbrite_sboc_search_saved_attendees($_SESSION['attendees_in_db'], $a->attendee->id)){ 	 
+	    $obj = new stdClass;
+	    $obj->last_name = $a->attendee->last_name;
+	    $obj->first_name = $a->attendee->first_name;	  
+	    $obj->email = $a->attendee->email;
+	    $obj->id = $a->attendee->id;
+	    $obj->event_id = $a->attendee->event_id;
+	    $obj->order_id = $a->attendee->order_id;
+		$obj->created = substr($a->attendee->created, 0, 10);		
+	    $obj->amount_paid = $a->attendee->amount_paid;
+	    $obj->registration_type = ($a->attendee->amount_paid > EVENTBRITE_SBOC_REGISTRATION_AMT_STD ? 'Premium' : 'Standard');
+	    $obj->ans_id = _eventbrite_sboc_answer_id($a->attendee->answers, EVENTBRITE_SBOC_QUESTION_ID_CATEGORY);
+	    $obj->category = $a->attendee->answers[$obj->ans_id]->answer->answer_text[0];
+	    $obj->category_name = $a->attendee->answers[$obj->ans_id]->answer->answer_text; 
+	    $obj->order_type = $a->attendee->order_type;	 
+        $obj->attachment = _eventbrite_sboc_select_attachment($obj->category);
+		/* $obj->attachment_mime_type = 'application/pdf'; */
+		$obj->attachment_mime_type = _eventbrite_sboc_mime_type(pathinfo($obj->attachment, PATHINFO_EXTENSION));
+	    $obj->email_sent = 0;
+	    $obj->email_send_date = NULL;
+	    $obj->extra_message_1 = _eventbrite_sboc_extra_messaage_1($obj->registration_type[0]);
+	    $obj->ans_id = _eventbrite_sboc_answer_id($a->attendee->answers, EVENTBRITE_SBOC_QUESTION_ID_CHILD_FIRST_NAME);
+	    $obj->child_first_name = $a->attendee->answers[$obj->ans_id]->answer->answer_text;
+	    $obj->ans_id = _eventbrite_sboc_answer_id($a->attendee->answers, EVENTBRITE_SBOC_QUESTION_ID_CHILD_LAST_NAME);
+	    $obj->child_last_name = $a->attendee->answers[$obj->ans_id]->answer->answer_text;
+		$obj->ans_id = _eventbrite_sboc_answer_id($a->attendee->answers, EVENTBRITE_SBOC_QUESTION_ID_REGION);
+	    $obj->region = $a->attendee->answers[$obj->ans_id]->answer->answer_text;
+	    $_SESSION['attendees'][] = $obj;
+	  }
+	  /** Do we want to get out of here once the create date is before the low date value? **/
+      if ($ctr >= EVENTBRITE_SBOC_EMAIL_SEND_LIMIT /* || substr($a->attendee->created, 0, 10) < EVENTBRITE_SBOC_REGISTRATION_LOW_DATE */){
+		  break;		
+	  }
+	  $ctr++;
+	}	
+	return $ctr;
+ }
+ 
+ function _eventbrite_sboc_get_attendees_from_db(){  
+   $result = db_select('eventbrite_sboc_attendees', 'e')  
+   ->where('(e.event_id = \''. _eventbrite_sboc_event_id(). '\') AND (DATE_FORMAT(e.create_date,\'%Y-%m-%d\') >= \''. EVENTBRITE_SBOC_REGISTRATION_LOW_DATE. '\')' )
+   ->fields('e', array('event_id', 'attendee_id', 'order_id', 'email_address', 'email_sent', 'email_send_date',))   
+   ->orderBy('attendee_id', EVENTBRITE_SBOC_LIST_SORT_ORDER)
+   ->range(0, 50)
+   ->execute()
+   ->fetchAll();   
+   return $result;
+}  
+
+ function _eventbrite_sboc_answer_id($answers, $question_id){
+   $result = 0;
+   foreach($answers as $key => $ans){
+     if ($ans->answer->question_id == $question_id){
+	   $result = $key;
+	   break;
+	 }
+   }
+   return $result;
+ }
+
+ function _eventbrite_sboc_insert_attendee_to_db($attendee){
+   $eid = db_insert('eventbrite_sboc_attendees')
+     ->fields(array(
+     'event_id' => $attendee->event_id,
+     'attendee_id' => $attendee->id,
+     'create_date' => date('Y-m-d H:i:s'),
+	 'order_id' => $attendee->order_id,
+	 'email_address' => $attendee->email,
+	 'last_name' => $attendee->last_name,
+	 'first_name' => $attendee->first_name,
+	 'category' => $attendee->category, 
+	 'order_type' => $attendee->order_type, 
+	 'email_sent' => $attendee->email_sent, 
+	 'email_send_date' => $attendee->email_send_date,
+  ))
+  ->execute();
+  return $eid;
+ }
+
+ function _eventbrite_sboc_select_max_event_attendee_id(){
+   $result = 0; 
+   $event_id = _eventbrite_sboc_event_id();
+   $query =  db_select('_eventbrite_sboc_attendees','ea')
+   ->fields('ea', 'event_id')
+   ->addExpression('MAX(attendee_id)', 'max_attendee_id')
+   ->condition('ea.event_id', $event_id, '=')
+   ->groupBy('event_id')
+   ->execute();
+   return $result;
+ }
+
+ function _eventbrite_sboc_search_saved_attendees($attendees, $search_id){
+    $result = FALSE;
+    foreach($attendees as $a){
+	  if($a->attendee_id == $search_id){
+	     $result = TRUE;
+	     break;
+	  }
+	}
+    return $result; 	
+ }
+
+ function _eventbrite_sboc_select_attachment($category){  
+   $attachment = DRUPAL_ROOT . '/'. variable_get('file_private_path', '') . '/';
+   switch($category){
+     case 'I':
+	  $attachment .= variable_get('eventbrite_sboc_filename_3', '');
+	  break;
+	 case 'J':	  
+	  $attachment .= variable_get('eventbrite_sboc_filename_2', '');
+	  break; 
+     case 'P':	  
+	  $attachment .= variable_get('eventbrite_sboc_filename_1', '');
+	  break; 
+	 default:
+	  $attachment = ''; 
+      break;	
+   }  
+   return $attachment;
+ }
+
+ function _eventbrite_sboc_send_email($to, $message_body = '', $attachment='', $attachment_name='',
+   $attachment_mime_type = ''){
+   $result = FALSE;
+   $params['from'] = variable_get('eventbrite_sboc_email_return_address', '');
+   $params['attachment'] = $attachment;
+   $params['attachment_name'] = $attachment_name;
+   $params['mime_type'] = $attachment_mime_type; //e.g. 'application/pdf';
+   $params['subject'] = variable_get('eventbrite_sboc_file_node_title', variable_get('site_name', '(No Subject)'));
+   $params['message_body'] = $message_body;
+   try {
+     $message = array();
+     $message = drupal_mail(EVENTBRITE_SBOC_MODULE_NAME, EVENTBRITE_SBOC_MAIL_KEY, $to, 
+	 language_default(), $params, $params['from']);    
+	 watchdog(EVENTBRITE_SBOC_MODULE_NAME, t('Email successfully sent to: %to'), array('%to' => $to), WATCHDOG_INFO); 	 
+   }catch(Exception $e){
+      watchdog(EVENTBRITE_SBOC_MODULE_NAME, $e->getMessage(), array(), WATCHDOG_ERROR);
+   }
+   if ($message['result']){
+     $result = TRUE; 
+   } 
+   return $result;
+ }
+
+ function eventbrite_sboc_mail($key, &$message, $params){		
+	$langcode = $message['language']->language;
+	$message['subject'] = $params['subject'];		
+	$message['body'][] = $params['message_body'];
+	if (isset($params['attachment']) && !empty($params['attachment'])){
+	   $attachment = array(
+		   'filecontent' => file_get_contents($params['attachment']),	
+		   'filename' => $params['attachment_name'],
+		   'filemime' => $params['mime_type'],
+	    );
+	    $message['params']['attachments'][] = $attachment; 	
+	}	
+ }
+
+ function _eventbrite_sboc_process_emails($email=''){
+   $attendees = $_SESSION['attendees'];
+   $email = trim($email);   
+   $content = _eventbrite_sboc_message_body();
+   $success = FALSE;
+   $to = '';
+   $ctr = 0;
+   $debug_limit = variable_get('eventbrite_sboc_app_debug_send_limit', 0);
+   $debug_mode = (variable_get('eventbrite_sboc_app_debug', 0) == 1);
+   foreach($attendees as $a){  
+     $replacements = array('@first_name' => $a->first_name, '@last_name' => $a->last_name,
+     '@category_name' => $a->category_name, 
+	 '@extra_message_1' => $a->extra_message_1,
+	 '@registration_type' => $a->registration_type,
+	 '@child_first_name' => $a->child_first_name,
+	 '@child_last_name' => $a->child_last_name,);   
+     $message_body = format_string($content, $replacements);	
+	 $to = (empty($email) ? $a->email : $email);	 
+     $success = _eventbrite_sboc_send_email($to, $message_body, $a->attachment, drupal_basename($a->attachment),
+	 $a->attachment_mime_type);
+     if ($success){
+	   $a->email_sent = 1;
+	   $a->email_send_date = date('Y-m-d H:i:s');
+	   _eventbrite_sboc_insert_attendee_to_db($a);
+	 }
+	 $ctr++;
+	 if ($debug_mode){	    
+	    if (($debug_limit > 0) && ($ctr >= $debug_limit)){
+		   break; 
+		}
+	 }
+   }    
+   $to = variable_get('eventbrite_sboc_email_return_address', ''); 
+   if (count($attendees) && !empty($to)){
+	 $summary = theme('table', _eventbrite_sboc_summary_table_array($attendees));
+     $success = _eventbrite_sboc_send_email($to, $summary);
+   }
+ }
+
+ function _eventbrite_sboc_extra_messaage_1($registration_type){
+   $result = '';
+   switch ($registration_type){
+     case 'P':
+	   $result = ' The coaching and pronunciation CD will be mailed in January';
+	   break;
+	 case 'S':
+	   break;
+	 default:
+	   break;
+   }
+   return $result;
+ }
+
+ function _eventbrite_sboc_message_body(){
+   $output = '<p><b>Message could not be retrieved at this time.</b.</p>';
+   $title = variable_get('eventbrite_sboc_content_title', '');
+   $query = new EntityFieldQuery();
+   $entities = $query->entityCondition('entity_type', 'node')
+   ->propertyCondition('title', $title)
+   ->range(0,1)
+   ->execute();
+   if (!empty($entities['node'])){
+	 $node = node_load((int)current($entities['node'])->nid);
+	 if (is_object($node)){
+	   $lang = language_default();
+	   $output = $node->body[$lang->language][0]['value'];
+	 }
+   }
+   return $output;
+ }
+ 
+ function _eventbrite_sboc_summary_table_array($attendees){
+   $result = array(); 
+   $data = array();
+   $header = array(t('Order Id'), t('Create Date'), t('Email Address'), t('Last Name'),   	
+       t('First Name'), t('Category'), t('Region'), t('E-Manual Sent'), t('Send Date'),);
+   
+   foreach($attendees as $a){
+     $data[] = array($a->order_id, $a->created, $a->email, $a->last_name, $a->first_name, 
+	   $a->category, $a->region,(!empty($a->email_sent) ? 'Yes': 'No'), $a->email_send_date);
+   }  
+   $result = array('header'=>$header, 'rows'=>$data, 'attributes'=>array(), 'caption'=>t('E-Manual Deliver Summary'), 'colgroups'=>array(), 'empty'=>array(), 'sticky'=>array(),);   
+   return $result;
+ }
+ 
+ function _eventbrite_sboc_display_attendee_list($attendees){
+   $result = array(); 
+   $data = array();
+   $header = array(
+       array('data' => '#', 'field' => 'ctr'),
+       array('data' => t('Order Id'), 'field' => 'order_id'),
+	   array('data' => t('Created'), 'field' => 'create_date'),
+       array('data' => t('Email Address'), 'field' => 'email_address'),
+       array('data' => t('Last Name'), 'field' => 'last_name'),   	
+       array('data' => t('First Name'), 'field' => 'first_name'), 	
+       array('data' => t('Category'), 'field' => 'category_name'),	
+	   array('data' => t('Region'), 'field' => 'region'),	
+	   array('data' => t('Amount Paid'), 'field' => 'amount_paid'),	
+	   array('data' => t('Order Status'), 'field' => 'order_type'),			   
+    );
+	
+   $ctr = 0;	
+   foreach($attendees as $a){
+     $data[] = array(++$ctr, $a->order_id, $a->created, $a->email, $a->last_name, $a->first_name, 
+	   $a->category_name, $a->region, $a->amount_paid, $a->order_type,);
+   }  
+   
+   /* $caption = format_string(t('Attendees not yet emailed - (!count)'), array('!count' => count($attendees))); */
+   $caption = '<strong>'. t('Attendees not yet emailed - (!count)', array('!count' => count($attendees))).'</strong>';
+   /* $caption = '<strong>' . $caption . '</strong>'; */
+   $result = array('header'=>$header, 'rows'=>$data, 'attributes'=>array(), 'caption'=> $caption, 'colgroups'=>array(),);    
+   
+   $output = theme('table', $result);
+   return $output;
+ }
+ 
+ function _eventbrite_sboc_mime_type($ext){
+   $result = '';
+   switch($ext){
+     case 'pdf':
+	   $result = 'application/pdf';
+	   break;
+	 default:
+       break;	 
+  }
+   return $result;
+ }

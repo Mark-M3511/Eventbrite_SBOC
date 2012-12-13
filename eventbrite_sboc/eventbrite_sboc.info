@@ -1,0 +1,11 @@
+name = Eventbrite SBOC
+description = Manage SBOC events on Eventbrite
+package = Eventbrite SBOC
+core = 7.x
+configure = admin/config/system/eventbrite_sboc
+;include Eventbrite class file
+files[] = includes/Eventbrite.php
+files[] = test/Eventbrite.php
+
+;version info
+version = '7.x-1.0-dev'

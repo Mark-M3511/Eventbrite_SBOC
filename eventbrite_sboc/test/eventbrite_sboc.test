@@ -1,0 +1,21 @@
+<?php
+ /**
+ * Administration tests for my module.
+ */
+ class EventbriteSbocUnitTestCase extends DrupalWebTestCase{
+   public static function getInfo() {
+		return array(
+			'name' => 'Eventbrite SBOC Unit Test',
+			'description' => '',
+			'group' => 'Eventbrite SBOC',
+        );
+   }
+  
+   public function setUp() {
+     parent::setUp('Eventbrite SBOC Test Case');
+ 	// set up milemail, mailsystem modules
+   }
+  
+    
+  
+}
