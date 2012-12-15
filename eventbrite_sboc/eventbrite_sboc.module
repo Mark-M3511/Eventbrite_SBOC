@@ -71,8 +71,9 @@
     $items['admin/config/system/eventbrite_sboc'] = array(
 	  'title' => 'Configure Eventbrite for SBOC',
 	  'description' => 'Enter Eventbrite API credentials and manage service preferences',
-	  'page callback' => 'drupal_get_form',
-	  'page arguments' => array('_eventbrite_sboc_config_form'),
+	  /* 'page callback' => 'drupal_get_form',
+	  'page arguments' => array('_eventbrite_sboc_config_form'), */
+	  'page callback' => '_eventbrite_sboc_build_config_forms',
 	  'access arguments' => array('administer ebsboc'),
 	  'file' => 'eventbrite_sboc_admin_form.inc',
 	  'file path' => drupal_get_path('module', 'eventbrite_sboc'). '/includes',	
@@ -312,7 +313,7 @@
      $display_list = (int)arg(5);
    }
       
-   _eventbrite_sboc_debug('_eventbrite_sboc_debug_lists', array('display_list' => $display_list, 'attendees' => $eb_attendee_list->attendees));
+   _eventbrite_sboc_debug('_eventbrite_sboc_debug_lists', array('display_list' => $display_list, 'attendees' => $eb_attendee_list->attendees, 'oauth_login_result' => $oauth_login_result,));
    
    $attendee_list = _eventbrite_sboc_display_attendee_list($_SESSION['attendees']);
    return theme('attendee_list', array('attendee_list' => $attendee_list, 'attendee_list_count' => count($eb_attendee_list->attendees),));  
@@ -327,7 +328,7 @@
 	}
  }
  
- function _eventbrite_sboc_debug_lists($display_list, $attendees){
+ function _eventbrite_sboc_debug_lists($display_list, $attendees, $oauth_login_result){
     if ($display_list == 1 && module_exists('devel') && (variable_get('eventbrite_sboc_app_debug', 0) == 1)){
       if (variable_get('eventbrite_sboc_app_full_eb_list_attendees', 0) == 1) {	
         /*  dpm($eb_attendee_list->attendees); */
@@ -477,15 +478,15 @@
    $params['message_body'] = $message_body;
    try {
      $message = array();
-     $message = drupal_mail(EVENTBRITE_SBOC_MODULE_NAME, EVENTBRITE_SBOC_MAIL_KEY, $to, 
-	 language_default(), $params, $params['from']);    
+     $message = drupal_mail(EVENTBRITE_SBOC_MODULE_NAME, EVENTBRITE_SBOC_MAIL_KEY, $to, language_default(), $params, $params['from']); 
+     if (!$message['result']){	 	 
+	    throw new Exception(t('Email could not be sent to: %to', array('%to' => $to)));
+	 }
+	 $result = TRUE;
 	 watchdog(EVENTBRITE_SBOC_MODULE_NAME, t('Email successfully sent to: %to'), array('%to' => $to), WATCHDOG_INFO); 	 
    }catch(Exception $e){
       watchdog(EVENTBRITE_SBOC_MODULE_NAME, $e->getMessage(), array(), WATCHDOG_ERROR);
    }
-   if ($message['result']){
-     $result = TRUE; 
-   } 
    return $result;
  }
 
@@ -557,7 +558,7 @@
  }
 
  function _eventbrite_sboc_message_body(){
-   $output = '<p><b>Message could not be retrieved at this time.</b.</p>';
+   $output = '<p style="font-weight: bold;">'. t('Message could not be retrieved at this time.'). '</p>';
    $title = variable_get('eventbrite_sboc_content_title', '');
    $query = new EntityFieldQuery();
    $entities = $query->entityCondition('entity_type', 'node')
@@ -620,13 +621,30 @@
  }
  
  function _eventbrite_sboc_mime_type($ext){
+   /* http://en.wikipedia.org/wiki/Internet_media_type */
    $result = '';
-   switch($ext){
+   switch($ext){    
+	 case 'doc':
+       $result = 'application/msword';
+	   break; 
+	 case 'gzip':
+       $result = 'application/zip';
+	   break;   
      case 'pdf':
 	   $result = 'application/pdf';
-	   break;
+	   break;	   	
+ 	 case 'ppt':
+       $result = 'application/mspowerpoint';
+	   break;  
+	 case 'xls':
+	 case 'xlt':
+       $result = 'application/msexcel';
+	   break;  
+	 case 'zip':
+       $result = 'application/zip';
+	   break;      	   
 	 default:
        break;	 
-  }
+   }
    return $result;
  }

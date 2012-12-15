@@ -5,7 +5,10 @@ core = 7.x
 configure = admin/config/system/eventbrite_sboc
 ;include Eventbrite class file
 files[] = includes/Eventbrite.php
-files[] = test/Eventbrite.php
+files[] = test/eventbrite_sboc.test
+;dependencies - other projects that are required to make this one work
+dependencies[] = mailsystem
+dependencies[] = mimemail
 
 ;version info
-version = '7.x-1.0-dev'
+version = '7.x-1.1-dev'

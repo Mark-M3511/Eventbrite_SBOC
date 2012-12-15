@@ -15,9 +15,17 @@
  
  define('EVENTBRITE_SBOC_MODULE_DEBUG_SEND_LIMIT', 5);
  
- function _eventbrite_sboc_config_form($form, &$form_state){ 
-
-	$form['eventbrite_api_settings'] = array(
+ function _eventbrite_sboc_build_config_forms(){ 
+    // drupal_render(drupal_get_form('_eventbrite_sboc_config_form2'));
+	$output = drupal_render(drupal_get_form('_eventbrite_sboc_debug_config_form_api_credentials'));
+	$output .= drupal_render(drupal_get_form('_eventbrite_sboc_debug_config_form_client_credentials'));	
+	$output .= drupal_render(drupal_get_form('_eventbrite_sboc_debug_config_form_service'));	
+	return $output;
+ }
+ 
+ function _eventbrite_sboc_debug_config_form_api_credentials($form, &$form_state){
+ 
+    $form['eventbrite_api_settings'] = array(
 		'#type' => 'fieldset',
 		'#title' => t('Eventbrite API credentials'),
 	);
@@ -57,8 +65,13 @@
 		'#value_callback' => '_eventbrite_oauth_key_value_callback',
 		'#description' => t('Enter your Eventbrite OAUTH key for access authorization'),
 	);
-	
-	$form['eventbrite_event_user_credentials'] = array(
+    
+   return system_settings_form($form);
+ }
+ 
+ function _eventbrite_sboc_debug_config_form_client_credentials($form, &$form_state){
+ 
+    $form['eventbrite_event_user_credentials'] = array(
 		'#type' => 'fieldset',
 		'#title' => t('Eventbrite User Credentials'),
 	);
@@ -80,9 +93,14 @@
 		'#maxlength' => 250,
 		'#description' => t('Enter Eventbrite user\'s password (This is the password associated with their Eventbrite account.)'),
 		/* '#required' => TRUE, */
-	);
+	);	
 	
-	$form['eventbrite_event_settings'] = array(
+	return system_settings_form($form); 
+ }
+ 
+ function _eventbrite_sboc_debug_config_form_service($form, &$form_state){
+ 
+    $form['eventbrite_event_settings'] = array(
 		'#type' => 'fieldset',
 		'#title' => t('Eventbrite event information'),
 	);
@@ -108,7 +126,7 @@
 		'#description' => t('Check to start service | Uncheck to shut down service'),
 	);
 	
-	return system_settings_form($form); 
+    return system_settings_form($form);
  }
 
  function _eventbrite_sboc_debug_config_form($form, &$form_state){

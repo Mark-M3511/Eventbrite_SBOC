@@ -1,21 +1,24 @@
 <?php
  /**
- * Administration tests for my module.
+ * Unit and Functional testing for Eventbrite SBOC module
  */
- class EventbriteSbocUnitTestCase extends DrupalWebTestCase{
+ class EventbriteSBOCUnitTestCase extends DrupalWebTestCase{
    public static function getInfo() {
 		return array(
-			'name' => 'Eventbrite SBOC Unit Test',
-			'description' => '',
+			'name' => 'Eventbrite SBOC Automated Functional Test Cases',
+			'description' => 'Unit and Functional test cases',
 			'group' => 'Eventbrite SBOC',
         );
    }
   
-   public function setUp() {
-     parent::setUp('Eventbrite SBOC Test Case');
- 	// set up milemail, mailsystem modules
-   }
-  
-    
+   public function setUp() {     
+     parent::setUp('mailsystem');
+	 parent::setUp('mimemail');	   	 
+	 parent::setUp('eventbrite_sboc');
+   }  
+
+   public function testSendEmailWithoutAttachment(){
+     
+   }   
   
 }
