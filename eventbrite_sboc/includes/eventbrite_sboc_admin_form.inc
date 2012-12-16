@@ -15,6 +15,8 @@
  
  define('EVENTBRITE_SBOC_MODULE_DEBUG_SEND_LIMIT', 5);
  
+ require_once(drupal_get_path('module', 'eventbrite_sboc'). '/includes/eventbrite_sboc_helpers.inc');
+ 
  function _eventbrite_sboc_build_config_forms(){ 
     // drupal_render(drupal_get_form('_eventbrite_sboc_config_form2'));
 	$output = drupal_render(drupal_get_form('_eventbrite_sboc_debug_config_form_api_credentials'));
