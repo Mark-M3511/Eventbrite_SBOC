@@ -23,7 +23,9 @@
  /**
  * Implementation of hook_help
  */
-
+ 
+ require_once(drupal_get_path('module', 'eventbrite_sboc'). '/includes/eventbrite_sboc_helpers.inc');
+ 
  function eventbrite_sboc_help($path, $arg) {
     $output = '';
 	switch($path){
@@ -143,7 +145,7 @@
  
  function eventbrite_sboc_cron(){
    $queue = DrupalQueue::get('email_distribution');
-   $data = variable_get('site_mail', 'no-email@no-email-address.no-domain');
+   $data = variable_get('site_mail', _eventbrite_sboc_api_user_email());
    if (variable_get('eventbrite_sboc_email_send_option','test') == 'live'){
      $data = '';
    }	 
@@ -167,7 +169,33 @@
 	}
  }
  
-  function _eventbrite_sboc_kick_service($email=''){    
+ /**** Code specific to ulitmate cron module ****/  
+ // '*/15 * * * *';   
+ /* 
+ function _eventbrite_sboc_mymodule_cronapi(($op, $job = NULL){  
+   switch($op) {
+    case 'list':
+      return array(
+        '_eventbrite_sboc_cronjob_1' => 'Cron-1 Handler',
+      );
+
+    case 'rule':
+      switch($job) {
+        case '_eventbrite_sboc_cronjob_1': return '';
+      );
+
+    case 'execute':
+      switch($job) {
+        case '_eventbrite_sboc_cronjob_1':
+          _eventbrite_sboc_email_auto_sender(eventbrite_sboc_api_user_email());
+          break;
+      }
+
+  }
+ }  */
+ /**** Code specific to ulitmate cron module ****/
+ 
+ function _eventbrite_sboc_kick_service($email=''){    
     _eventbrite_sboc_get_attendee_list();
 	_eventbrite_sboc_process_emails($email);	
  }
@@ -198,7 +226,7 @@
 	  'attendee_list_count_line' => array(
 		 '#type' => 'markup',
 		 '#prefix' => '<p><strong>',
-		 '#markup' => format_string('Total registered attendees for this event on Eventbrite: @d', array('@d' => $attendee_list_count)),
+		 '#markup' => format_string('Total registered attendees for this event on Eventbrite: !d', array('!d' => $attendee_list_count)),
 		 '#suffix' => '</strong></p>',
        ),
 	   'attendee_list_table' => array(
@@ -308,8 +336,7 @@
 	    $obj->category = $a->attendee->answers[$obj->ans_id]->answer->answer_text[0];
 	    $obj->category_name = $a->attendee->answers[$obj->ans_id]->answer->answer_text; 
 	    $obj->order_type = $a->attendee->order_type;	 
-        $obj->attachment = _eventbrite_sboc_select_attachment($obj->category);
-		/* $obj->attachment_mime_type = 'application/pdf'; */
+        $obj->attachment = _eventbrite_sboc_select_attachment($obj->category);		
 		$obj->attachment_mime_type = _eventbrite_sboc_mime_type(pathinfo($obj->attachment, PATHINFO_EXTENSION));
 	    $obj->email_sent = 0;
 	    $obj->email_send_date = NULL;
@@ -322,7 +349,7 @@
 	    $obj->region = $a->attendee->answers[$obj->ans_id]->answer->answer_text;
 	    $_SESSION['attendees'][] = $obj;
 	  }
-	  /** Do we want to get out of here once the create date is before the low date value? **/
+	  /** Do we want to get out of here once the create date is less than the low date value? **/
       if ($ctr >= EVENTBRITE_SBOC_EMAIL_SEND_LIMIT /* || substr($a->attendee->created, 0, 10) < EVENTBRITE_SBOC_REGISTRATION_LOW_DATE */){
 		  break;		
 	  }

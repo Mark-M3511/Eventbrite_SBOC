@@ -291,7 +291,7 @@
 	return $form;
  }
 
-function _eventbrite_sboc_config_form3_submit($form, &$form_state){
+ function _eventbrite_sboc_config_form3_submit($form, &$form_state){
    $email_address = $form_state['values']['eventbrite_sboc_email_address'];
    if (valid_email_address($email_address)){
 	 _eventbrite_sboc_admin_send_email($email_address);
@@ -300,27 +300,27 @@ function _eventbrite_sboc_config_form3_submit($form, &$form_state){
      form_set_error('email', t('The e-mail address provided is invalid.')); 
      watch_dog(WATCHDOG_ERROR, format_string('Invalid email address @email_address', array('@email_address' => $email_address)));
    }
-}
+ }
 
-function _eventbrite_sboc_admin_send_email($email_address) {
+ function _eventbrite_sboc_admin_send_email($email_address) {
    _eventbrite_sboc_get_attendee_list();
    _eventbrite_sboc_process_emails($email_address);
-}
+ }
  
 /*
  * Validate admin settings form
  */
 
-function _eventbrite_sboc_config_form_validate($form, &$form_state){
-  $eventbrite_api_key = $form_state['values']['eventbrite_api_key'];
-  $eventbrite_api_user_key = $form_state['values']['eventbrite_api_user_key'];
+ function _eventbrite_sboc_config_form_validate($form, &$form_state){
+   $eventbrite_api_key = $form_state['values']['eventbrite_api_key'];
+   $eventbrite_api_user_key = $form_state['values']['eventbrite_api_user_key'];
     
-  if (empty($eventbrite_app_key) || empty($eventbrite_api_user_key)) {
-	return FALSE;
-  }
+   if (empty($eventbrite_app_key) || empty($eventbrite_api_user_key)) {
+	 return FALSE;
+   }
   
-  return TRUE;
-}
+   return TRUE;
+ }
 
 
 

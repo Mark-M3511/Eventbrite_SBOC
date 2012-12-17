@@ -14,6 +14,9 @@ To submit bug reports and feature suggestions, or to track changes on GitHub:
  * Mime Mail
  * Mail System
  * Eventbrite API Access - PHP project at: http://eventbrite.github.com 
+ 
+ -- RECOMMENDATIONS --
+ * Ulitamte Cron project - http://drupal.org/project/ultimate_cron
 
 -- INSTALLATION --
   
