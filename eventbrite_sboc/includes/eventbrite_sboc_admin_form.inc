@@ -145,20 +145,23 @@
 		'#description' => t('Turn on debug mode'),
 	);
 	
-	$form['eventbrite_app_debug_settings']['eventbrite_sboc_app_full_eb_list_attendees'] = array(
+	$form['eventbrite_app_debug_settings']['eventbrite_sboc_app_display_debug_data_rows'] = array(
 		'#type' => 'checkbox',
-		'#title' => t('Debug mode: Display all attendees'),
-		'#default_value' => variable_get('eventbrite_sboc_app_full_eb_list_attendees', 0),
-		'#description' => t('Debug mode: display full list of attendees fetched from Eventbrite (CAUTION: potentially very slow operation)'),
+		'#title' => t('Debug mode: Display data records'),
+		'#default_value' => variable_get('eventbrite_sboc_app_display_debug_data_rows', 0),
+		'#description' => t('Debug mode: display data records creeated during interaction with EB servers. (CAUTION: potentially very slow operation)'),
 	);
 	
-	$options = array();
-	for ($ctr = 0; $ctr < EVENTBRITE_SBOC_MODULE_DEBUG_SEND_LIMIT; $ctr++){
-	  if ($ctr == 0){
-	    $options[] = 'No Limit';
-	  }else{
-	    $options[] = $ctr; 
-	  }
+	$form['eventbrite_app_debug_settings']['eventbrite_sboc_app_full_eb_list_attendees'] = array(
+		'#type' => 'checkbox',
+		'#title' => t('Debug mode: Display full Eventbrite attendee list'),
+		'#default_value' => variable_get('eventbrite_sboc_app_full_eb_list_attendees', 0),
+		'#description' => t('Debug mode: display full list of attendees fetched from Eventbrite. (CAUTION: potentially very slow operation)'),
+	);
+	
+	$options = array('No Limit');
+	for ($ctr = 1; $ctr < EVENTBRITE_SBOC_MODULE_DEBUG_SEND_LIMIT; $ctr++){	 
+	   $options[] = $ctr; 	
 	}
 	
 	$form['eventbrite_app_debug_settings']['eventbrite_sboc_app_debug_send_limit'] = array(

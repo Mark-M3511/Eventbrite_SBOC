@@ -310,9 +310,11 @@
 		dpm($attendees);
 	  }
 	  // Debug only
-	  dpm($oauth_login_result);
-      dpm($_SESSION['attendees']);
-	  dpm($_SESSION['attendees_in_db']); 
+	  if (variable_get('eventbrite_sboc_app_display_debug_data_rows', 0) == 1){
+	    dpm($oauth_login_result);
+        dpm($_SESSION['attendees']);
+	    dpm($_SESSION['attendees_in_db']); 
+	  }
    }
  }
 
@@ -445,6 +447,7 @@
  function _eventbrite_sboc_send_email($to, $message_body = '', $attachment='', $attachment_name='',
    $attachment_mime_type = ''){
    $result = FALSE;
+   $params = array(); // create parameters array to hold various values for drupal_mail function
    $params['from'] = variable_get('eventbrite_sboc_email_return_address', '');
    $params['attachment'] = $attachment;
    $params['attachment_name'] = $attachment_name;
