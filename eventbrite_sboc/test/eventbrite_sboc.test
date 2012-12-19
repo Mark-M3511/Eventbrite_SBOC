@@ -17,7 +17,7 @@
 	 parent::setUp('eventbrite_sboc');
    }  
 
-   public function testSendEmailWithoutAttachment(){
+   public function testSendAnEmail(){
      
    }   
   

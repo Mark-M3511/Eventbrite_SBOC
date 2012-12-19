@@ -34,7 +34,7 @@
 	
 	$form['eventbrite_api_settings']['eventbrite_api_notice_1'] = array(
 	  '#prefix' => '<p style="color: #F00;"><strong>',
-	  '#markup' => t('Please Note: OAUTH Key and User Password fields can be used together or alternately. For security reasons their values are never displayed and will be overwritten each time the form is saved. So, ensure you have those values handy each time.'),
+	  '#markup' => t('Please Note: OAUTH Key and User Password fields can be used together or alternately. For security reasons their values are never displayed and will be overwritten each time their respective forms are saved. So, ensure you have those values handy each time.'),
 	  '#suffix' => '</strong></p>',
 	);
 	
