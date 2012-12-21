@@ -306,7 +306,6 @@
  function _eventbrite_sboc_debug_lists($display_list, $attendees, $oauth_login_result){
     if ($display_list == 1 && module_exists('devel') && (variable_get('eventbrite_sboc_app_debug', 0) == 1)){
       if (variable_get('eventbrite_sboc_app_full_eb_list_attendees', 0) == 1) {	
-        /*  dpm($eb_attendee_list->attendees); */
 		dpm($attendees);
 	  }
 	  // Debug only
@@ -314,6 +313,7 @@
 	    dpm($oauth_login_result);
         dpm($_SESSION['attendees']);
 	    dpm($_SESSION['attendees_in_db']); 
+		dpm($_SESSION['attendees_to_db']);
 	  }
    }
  }
@@ -383,6 +383,27 @@
    return $result;
  }
 
+ function _eventbrite_sboc_insert_attendee_to_db_2(){
+    $query = db_insert('eventbrite_sboc_attendees')
+	  ->fields(array('event_id', 
+	  'attendee_id', 
+	  'create_date', 
+	  'order_id', 
+	  'email_address',
+	  'last_name', 
+	  'first_name', 
+	  'category', 
+	  'order_type',
+	  'email_sent', 
+	  'email_send_date',));
+	  
+	foreach($_SESSION['attendees_to_db'] as $rows){
+	  $query->values($rows); 	
+    }	
+	
+	$query->execute();  
+ }
+ 
  function _eventbrite_sboc_insert_attendee_to_db($attendee){
    $eid = db_insert('eventbrite_sboc_attendees')
      ->fields(array(
@@ -491,6 +512,7 @@
    $ctr = 0;
    $debug_limit = variable_get('eventbrite_sboc_app_debug_send_limit', 0);
    $debug_mode = (variable_get('eventbrite_sboc_app_debug', 0) == 1);
+   $_SESSION['attendees_to_db'] = array();;
    foreach($attendees as $a){  
      $replacements = array(
 	 '@first_name' => $a->first_name, 
@@ -508,7 +530,20 @@
      if ($success){
 	   $a->email_sent = 1;
 	   $a->email_send_date = date('Y-m-d H:i:s');
-	   _eventbrite_sboc_insert_attendee_to_db($a);
+	   $_SESSION['attendees_to_db'][] = array(
+			'event_id' => $a->event_id,
+			'attendee_id' => $a->id,
+			'create_date' => date('Y-m-d H:i:s'),
+			'order_id' => $a->order_id,
+			'email_address' => $a->email,
+			'last_name' => $a->last_name,
+			'first_name' => $a->first_name,
+			'category' => $a->category, 
+			'order_type' => $a->order_type, 
+			'email_sent' => $a->email_sent, 
+			'email_send_date' => $a->email_send_date,
+	    );
+	   // _eventbrite_sboc_insert_attendee_to_db($a);	   
 	 }
 	 $ctr++;
 	 if ($debug_mode){	    
@@ -516,7 +551,8 @@
 		   break; 
 		}
 	 }
-   }    
+   }   
+   _eventbrite_sboc_insert_attendee_to_db_2();   
    $to = variable_get('eventbrite_sboc_email_return_address', ''); 
    if (count($attendees) && !empty($to)){
 	 $summary = theme('table', _eventbrite_sboc_summary_table_array($attendees));
@@ -609,6 +645,7 @@
        $result = 'application/msword';
 	   break; 
 	 case 'gzip':
+	 case 'zip':
        $result = 'application/zip';
 	   break;   
      case 'pdf':
@@ -621,9 +658,9 @@
 	 case 'xlt':
        $result = 'application/msexcel';
 	   break;  
-	 case 'zip':
+	 /* case 'zip':
        $result = 'application/zip';
-	   break;      	   
+	   break; */      	   
 	 default:
        break;	 
    }
