@@ -4,6 +4,8 @@
  */
  class EventbriteSBOCUnitTestCase extends DrupalWebTestCase{
  
+   protected $privileged_user;
+ 
    public static function getInfo() {
 		return array(
 			'name' => 'Eventbrite SBOC Automated Functional Test Cases',
@@ -13,24 +15,30 @@
    }
   
    public function setUp() {     
-     parent::setUp('eventbrite_sboc', 'mailsystem', 'mimemail');
+     parent::setUp(array('eventbrite_sboc', 'mailsystem', 'mimemail'));
+	 $this->privileged_user = $this->drupalCreateUser(array('administer ebsboc'));
+     $this->drupalLogin($this->privileged_user);
    }  
 
    public function testSendAnEmail(){
       
-      $result = _eventbrite_sboc_send_email('');
 	  $message = 'Empty email address should return false';
+      $result = _eventbrite_sboc_send_email('');	  
 	  $this->assertFalse($result, $message);
 	  
-	  $result = _eventbrite_sboc_send_email('test@tet.com');
 	  $message = 'Non-empty but validly formatted email address should return false';
+	  $result = _eventbrite_sboc_send_email('test@tet.com');	 
 	  $this->assertFalse($result, $message);
 	  
 	  $email = $this->randomName(30);
-	  $result = _eventbrite_sboc_send_email($email);
 	  $message = 'Non-empty but NOT validly formatted email address should return false';
+	  $result = _eventbrite_sboc_send_email($email);	  
 	  $this->assertFalse($result, $message); 
 	  
    }   
+   
+   public function testEBAPIConnectivity(){
+     
+   }
   
 }

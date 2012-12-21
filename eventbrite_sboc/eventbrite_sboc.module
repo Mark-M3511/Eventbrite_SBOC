@@ -477,6 +477,12 @@
    $params['message_body'] = $message_body;
    try {
      $message = array();
+	 if (!valid_email_address($to)){
+	    throw new Exception(t('Invalid email address: \'%to\' for recipient', array('%to' => $to)));
+	 }
+	 if (!valid_email_address($params['from'])){
+	    throw new Exception(t('Invalid email address: \'%from\' for sender', array('%from' => $params['from'])));
+	 }
      $message = drupal_mail(EVENTBRITE_SBOC_MODULE_NAME, EVENTBRITE_SBOC_MAIL_KEY, $to, language_default(), $params, $params['from']); 
      if (!$message['result']){	 	 
 	    throw new Exception(t('Email could not be sent to: %to', array('%to' => $to)));
