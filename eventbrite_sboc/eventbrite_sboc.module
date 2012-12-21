@@ -634,9 +634,9 @@
 	   $a->category_name, $a->region, $a->amount_paid, $a->order_type,);
    }  
    
-   /* $caption = format_string(t('Attendees not yet emailed - (!count)'), array('!count' => count($attendees))); */
+   
    $caption = '<strong>'. t('Attendees not yet emailed - (!count)', array('!count' => count($attendees))).'</strong>';
-   /* $caption = '<strong>' . $caption . '</strong>'; */
+  
    $result = array('header'=>$header, 'rows'=>$data, 'attributes'=>array(), 'caption'=> $caption, 'colgroups'=>array(),);    
    
    $output = theme('table', $result);
@@ -663,10 +663,7 @@
 	 case 'xls':
 	 case 'xlt':
        $result = 'application/msexcel';
-	   break;  
-	 /* case 'zip':
-       $result = 'application/zip';
-	   break; */      	   
+	   break;        	   
 	 default:
        break;	 
    }

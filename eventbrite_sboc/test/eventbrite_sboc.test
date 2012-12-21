@@ -15,30 +15,103 @@
    }
   
    public function setUp() {     
-     parent::setUp(array('eventbrite_sboc', 'mailsystem', 'mimemail'));
-	 $this->privileged_user = $this->drupalCreateUser(array('administer ebsboc'));
-     $this->drupalLogin($this->privileged_user);
+     parent::setUp(array('mailsystem', 'mimemail','eventbrite_sboc',));
+	 /* $this->privileged_user = $this->drupalCreateUser(array('administer ebsboc'));
+     $this->drupalLogin($this->privileged_user); */
    }  
 
    public function testSendAnEmail(){
       
-	  $message = 'Empty email address should return false';
-      $result = _eventbrite_sboc_send_email('');	  
-	  $this->assertFalse($result, $message);
+	 $message = 'Empty email address should return false';
+     $result = _eventbrite_sboc_send_email('');	  
+	 $this->assertFalse($result, $message);
 	  
-	  $message = 'Non-empty but validly formatted email address should return false';
-	  $result = _eventbrite_sboc_send_email('test@tet.com');	 
-	  $this->assertFalse($result, $message);
+	 $message = 'Non-empty but validly formatted email address should return false';
+	 $result = _eventbrite_sboc_send_email('test@tet.com');	 
+	 $this->assertFalse($result, $message);
 	  
-	  $email = $this->randomName(30);
-	  $message = 'Non-empty but NOT validly formatted email address should return false';
-	  $result = _eventbrite_sboc_send_email($email);	  
-	  $this->assertFalse($result, $message); 
+	 $email = $this->randomName(30);
+	 $message = 'Non-empty but NOT validly formatted email address should return false';
+	 $result = _eventbrite_sboc_send_email($email);	  
+	 $this->assertFalse($result, $message); 
+	 
+	 $email = 'support@holbrookgoodman.com';
+	 variable_set('eventbrite_sboc_email_return_address', 'support@holbrookgoodman.com');
+	 $message = 'Non-empty but validly formatted email address should return true';
+	 $result = _eventbrite_sboc_send_email($email);	  
+	 $this->assertTrue($result, $message); 
 	  
    }   
    
-   public function testEBAPIConnectivity(){
-     
+   public function testEBAPIConnectivity_OAuth2_0(){
+     variable_set('eventbrite_api_key', '7PMAHB34654SUZ2DZI');
+	 variable_set('eventbrite_api_user_key', '135127428944834319657');
+	 variable_set('eventbrite_oauth_key', '6UMSHRDSALXVQK57VBV7GF3KLBRFM67ZKTMTI76KNEQH64TKDE');
+	 $auth_key = array(
+       'client_secret' => variable_get('eventbrite_oauth_key', ''),     
+	   'access_token' => NULL,
+	   'client_id' =>  variable_get('eventbrite_api_key', ''),
+	   'app_key' =>  variable_get('eventbrite_api_key', ''),
+	   'user_key' => variable_get('eventbrite_api_user_key', ''),
+     );
+	 $eb_client = new Eventbrite($auth_key);
+	 $this->assertTrue($eb_client, 'Log in using OAuth 2.0 protocol should return valid EB API object');
+	 $this->assertFalse(_eventbrite_sboc_oauth_token(), 'OAuth token should NOT be availaable without log in');
+   }
+   
+   public function testEBAPIConnectivity_UserAccount(){
+     variable_set('eventbrite_api_key', '7PMAHB34654SUZ2DZI');
+	 variable_set('eventbrite_api_user_key', '135127428944834319657');
+	 variable_set('eventbrite_oauth_key', '6UMSHRDSALXVQK57VBV7GF3KLBRFM67ZKTMTI76KNEQH64TKDE');
+	 variable_set('eventbrite_sboc_api_user_email', 'sellonline@spellingbeeofcanada.ca');
+	 variable_set('eventbrite_sboc_api_user_password', 'sbocevt2012');
+	 $auth_key = array(
+       'client_secret' => variable_get('eventbrite_oauth_key', ''),     
+	   'access_token' => NULL,
+	   'client_id' =>  variable_get('eventbrite_api_key', ''),
+	   'app_key' =>  variable_get('eventbrite_api_key', ''),
+	   'user_key' => variable_get('eventbrite_api_user_key', ''),
+     );
+	 $user_email = variable_get('eventbrite_sboc_api_user_email', '');
+	 $user_pwd = variable_get('eventbrite_sboc_api_user_password', '');
+	 unset($auth_key['access_token']);
+	 $eb_client = new Eventbrite($auth_key, $user_email, $user_pwd);
+	 $this->assertTrue($eb_client, 'Log in using UID/Pwd authentication should return valid EB API object');
+   }
+   
+   public function testEBAPIConnectivity_UserAccount_Negative(){
+     variable_set('eventbrite_api_key', '');
+	 variable_set('eventbrite_api_user_key', '');
+	 variable_set('eventbrite_oauth_key', '');
+	 variable_set('eventbrite_sboc_api_user_email', '');
+	 variable_set('eventbrite_sboc_api_user_password', '');
+	 $auth_key = array(
+       'client_secret' => variable_get('eventbrite_oauth_key', ''),     
+	   'access_token' => NULL,
+	   'client_id' =>  variable_get('eventbrite_api_key', ''),
+	   'app_key' =>  variable_get('eventbrite_api_key', ''),
+	   'user_key' => variable_get('eventbrite_api_user_key', ''),
+     );
+	 $user_email = variable_get('eventbrite_sboc_api_user_email', '');
+	 $user_pwd = variable_get('eventbrite_sboc_api_user_password', '');
+	 unset($auth_key['access_token']);
+	 $eb_client = new Eventbrite($auth_key, $user_email, $user_pwd);
+	 $this->assertTrue($eb_client, 'Log in using incorrect UID/Pwd credentials should return valid object');
+   }
+   
+   public function testEBAPIConnectivity_OAuth2_0_Negative(){
+     variable_set('eventbrite_api_key', '');
+	 variable_set('eventbrite_api_user_key', '');
+	 variable_set('eventbrite_oauth_key', '');
+	 $auth_key = array(
+       'client_secret' => variable_get('eventbrite_oauth_key', ''),     
+	   'access_token' => NULL,
+	   'client_id' =>  variable_get('eventbrite_api_key', ''),
+	   'app_key' =>  variable_get('eventbrite_api_key', ''),
+	   'user_key' => variable_get('eventbrite_api_user_key', ''),
+     );
+	 $eb_client = new Eventbrite($auth_key);
+	 $this->assertTrue($eb_client, 'Log in using OAuth 2.0 protocol and invalid values should return valid EB API object');
    }
   
 }
