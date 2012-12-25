@@ -546,7 +546,7 @@
    $success = FALSE;
    $to = '';
    $ctr = 0;
-   $debug_limit = variable_get('eventbrite_sboc_app_debug_send_limit', 0);
+   $debug_limit = variable_get('eventbrite_sboc_app_debug_send_limit', 1);
    $debug_mode = (variable_get('eventbrite_sboc_app_debug', 0) == 1);
    $_SESSION['attendees_to_db'] = array();;
    foreach($attendees as $a){  
