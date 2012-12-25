@@ -16,8 +16,8 @@
   
    public function setUp() {     
      parent::setUp(array('mailsystem', 'mimemail','eventbrite_sboc',));
-	 /* $this->privileged_user = $this->drupalCreateUser(array('administer ebsboc'));
-     $this->drupalLogin($this->privileged_user); */
+	 $this->privileged_user = $this->drupalCreateUser(array('administer ebsboc'));
+     $this->drupalLogin($this->privileged_user);
    }  
 
    public function testSendAnEmail(){
@@ -44,9 +44,9 @@
    }   
    
    public function testEBAPIConnectivity_OAuth2_0(){
-     variable_set('eventbrite_api_key', '7PMAHB34654SUZ2DZI');
-	 variable_set('eventbrite_api_user_key', '135127428944834319657');
-	 variable_set('eventbrite_oauth_key', '6UMSHRDSALXVQK57VBV7GF3KLBRFM67ZKTMTI76KNEQH64TKDE');
+     variable_set('eventbrite_api_key', $this->randomName(20));
+	 variable_set('eventbrite_api_user_key', $this->randomName(30));
+	 variable_set('eventbrite_oauth_key', $this->randomName(49));
 	 $auth_key = array(
        'client_secret' => variable_get('eventbrite_oauth_key', ''),     
 	   'access_token' => NULL,
@@ -60,11 +60,11 @@
    }
    
    public function testEBAPIConnectivity_UserAccount(){
-     variable_set('eventbrite_api_key', '7PMAHB34654SUZ2DZI');
-	 variable_set('eventbrite_api_user_key', '135127428944834319657');
-	 variable_set('eventbrite_oauth_key', '6UMSHRDSALXVQK57VBV7GF3KLBRFM67ZKTMTI76KNEQH64TKDE');
-	 variable_set('eventbrite_sboc_api_user_email', 'sellonline@spellingbeeofcanada.ca');
-	 variable_set('eventbrite_sboc_api_user_password', 'sbocevt2012');
+     variable_set('eventbrite_api_key', $this->randomName(20));
+	 variable_set('eventbrite_api_user_key', $this->randomName(30));
+	 variable_set('eventbrite_oauth_key', $this->randomName(49));
+	 variable_set('eventbrite_sboc_api_user_email', $this->randomName(20));
+	 variable_set('eventbrite_sboc_api_user_password', $this->randomName(10));
 	 $auth_key = array(
        'client_secret' => variable_get('eventbrite_oauth_key', ''),     
 	   'access_token' => NULL,
@@ -76,7 +76,11 @@
 	 $user_pwd = variable_get('eventbrite_sboc_api_user_password', '');
 	 unset($auth_key['access_token']);
 	 $eb_client = new Eventbrite($auth_key, $user_email, $user_pwd);
-	 $this->assertTrue($eb_client, 'Log in using UID/Pwd authentication should return valid EB API object');
+	 $this->assertTrue($eb_client, 'Log in using UID/Pwd authentication should return valid EB API object');	
+	 $edit = array();
+	 $edit['email'] = $user_email;
+	 $edit['passwd'] = $user_pwd;	  
+	 $this->drupalPost('https://www.eventbrite.ca/login/', $edit, t('Log in'));
    }
    
    public function testEBAPIConnectivity_UserAccount_Negative(){
@@ -112,6 +116,79 @@
      );
 	 $eb_client = new Eventbrite($auth_key);
 	 $this->assertTrue($eb_client, 'Log in using OAuth 2.0 protocol and invalid values should return valid EB API object');
+   }
+   
+   public function testRetrieveAttendeesList(){
+     variable_set('eventbrite_api_key', $this->randomName(20));
+	 variable_set('eventbrite_api_user_key', $this->randomName(30));
+	 variable_set('eventbrite_oauth_key', $this->randomName(49));
+	 variable_set('eventbrite_sboc_api_user_email', $this->randomName(20));
+	 variable_set('eventbrite_sboc_api_user_password', $this->randomName(10));
+	 variable_set('eventbrite_event_id', $this->randomName(10));
+	 $auth_key = array(
+       'client_secret' => variable_get('eventbrite_oauth_key', ''),     
+	   'access_token' => NULL,
+	   'client_id' =>  variable_get('eventbrite_api_key', ''),
+	   'app_key' =>  variable_get('eventbrite_api_key', ''),
+	   'user_key' => variable_get('eventbrite_api_user_key', ''),
+     );
+	 $output = '';
+	 try {
+	   $output = _eventbrite_sboc_get_attendee_list();
+	 }catch(Exception $e){
+	   drupal_set_message(t('Exception thrown: %message', array('%message' => $e->getMessage(),)), 'error');
+	 }
+	 $this->verbose($output);
+     //$this->assertTrue($output, 'Call to eventbrite_sboc_get_attendee_list() should return a non empty string');
+	 $this->assertFalse($output, 'Call to eventbrite_sboc_get_attendee_list() should return a non empty string');
+   }
+   
+   public function testRetrieveAttendeesListPaged(){
+      $start_date = date('Y-m-d',strtotime('yesterday'));
+      $end_date	=  date('Y-m-d',strtotime('today'));
+      /* insert test data */
+      $_SESSION['attendees_to_db'] = array();
+	  $event_id = $this->randomName(10);
+	  variable_set('eventbrite_event_id', $event_id);
+      for ($ctr = 0; $ctr < 10; $ctr++){
+	    $_SESSION['attendees_to_db'][] = array(
+			'event_id' => $event_id,
+			'attendee_id' => mt_rand(100, 999),
+			'create_date' => date('Y-m-d H:i:s', time() - (24 * 60 * 60)),
+			'order_id' => mt_rand(1000, 10000),
+			'email_address' => $this->randomName(10),
+			'last_name' => $this->randomName(10),
+			'first_name' => $this->randomName(10),
+			'category' => $this->randomName(1), 
+			'order_type' => $this->randomName(10), 
+			'email_sent' => 1, 
+			'email_send_date' => date('Y-m-d H:i:s'),
+	    );
+	  }
+	  //debug($_SESSION['attendees_to_db']);
+	  _eventbrite_sboc_insert_attendees_to_db();
+	  $header = array( 
+	     array('data' => 'Order Id', 'field' => 'order_id', 'sort' => 'desc'),
+		 array('data' => 'Order Date', 'field' => 'create_date',),		 
+		 array('data' => 'Last Name', 'field' => 'last_name',),
+		 array('data' => 'First Name', 'field' => 'first_name', ),
+		 array('data' => 'Email Address', 'field' => 'email_address',), 
+		 array('data' => 'Category', 'field' => 'category',),
+         array('data' => 'Email Sent', 'field' => 'email_sent',), 
+		 array('data' => 'Email Sent On', 'field' => 'email_send_date',),
+		);
+      $result = _eventbrite_sboc_get_attendees_from_db_paged($start_date, $end_date, $header);
+	  //debug($result);	        
+	  $this->assertTrue($result, 'Return list of attendees from database');
+	  $data = array();
+	  foreach($result as $row){
+	    $data[] = array($row->order_id, $row->create_date, $row->last_name, $row->first_name, $row->email_address,
+		 $row->category, $row->email_sent, $row->email_send_date,);
+	  }
+	  $caption = 'Paginated Table Display';
+	  $table = array('header'=>$header, 'rows'=>$data, 'attributes'=>array(), 'caption'=> $caption, 'colgroups'=>array(),'empty' => 'No records returned...',); 
+	  $output = theme('table', $table). theme('pager', array('tags' => array()));
+	  $this->verbose($output);
    }
   
 }

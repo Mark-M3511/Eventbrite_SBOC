@@ -288,10 +288,20 @@
      $display_list = (int)arg(5);
    }
       
-   _eventbrite_sboc_debug('_eventbrite_sboc_debug_lists', array('display_list' => $display_list, 'attendees' => $eb_attendee_list->attendees, 'oauth_login_result' => $oauth_login_result,));
+   $params = array(
+     'display_list' => $display_list, 
+     'attendees' => $eb_attendee_list->attendees, 
+     'oauth_login_result' => $oauth_login_result,
+	);	  
+   _eventbrite_sboc_debug('_eventbrite_sboc_debug_lists', $params); 
    
    $attendee_list = _eventbrite_sboc_display_attendee_list($_SESSION['attendees']);
-   return theme('attendee_list', array('attendee_list' => $attendee_list, 'attendee_list_count' => count($eb_attendee_list->attendees),));  
+   $params = array(
+      'attendee_list' => $attendee_list, 
+	  'attendee_list_count' => count($eb_attendee_list->attendees),
+    );
+	
+   return theme('attendee_list', $params);  
  }
  
  function _eventbrite_sboc_debug($user_func, $args = array()){
@@ -370,7 +380,27 @@
    ->execute()
    ->fetchAll();   
    return $result;
-}  
+ }  
+ 
+ function _eventbrite_sboc_get_attendees_from_db_paged($start_date, $end_date, $header){  
+   $start_date = date('Y-m-d',strtotime($start_date));
+   $end_date = date('Y-m-d',strtotime($end_date));
+   
+   $result = db_select('eventbrite_sboc_attendees', 'e')  
+   ->where('(e.event_id = \''. _eventbrite_sboc_event_id(). '\') AND (DATE_FORMAT(e.create_date,\'%Y-%m-%d\') BETWEEN \''. $start_date . '\' AND \''.$end_date .'\')' )
+   ->extend('PagerDefault')
+   ->limit(4)  
+   ->extend('TableSort')
+   ->orderByHeader($header)
+   ->fields('e', array('order_id', 'create_date', 'last_name', 'first_name', 'email_address', 'category', 'email_sent', 'email_send_date',))   
+   ->orderBy('attendee_id', EVENTBRITE_SBOC_LIST_SORT_ORDER)
+   /* ->range(0, 50) */
+   ->execute()
+   ->fetchAll()
+   ;   
+   //return (string)$result;
+   return $result;
+ } 
 
  function _eventbrite_sboc_answer_id($answers, $question_id){
    $result = 0;
@@ -383,7 +413,7 @@
    return $result;
  }
 
- function _eventbrite_sboc_insert_attendee_to_db_2(){
+ function _eventbrite_sboc_insert_attendees_to_db(){
     $query = db_insert('eventbrite_sboc_attendees')
 	  ->fields(array('event_id', 
 	  'attendee_id', 
@@ -558,7 +588,7 @@
 		}
 	 }
    }   
-   _eventbrite_sboc_insert_attendee_to_db_2();   
+   _eventbrite_sboc_insert_attendees_to_db();   
    $to = variable_get('eventbrite_sboc_email_return_address', ''); 
    if (count($attendees) && !empty($to)){
 	 $summary = theme('table', _eventbrite_sboc_summary_table_array($attendees));
@@ -636,6 +666,38 @@
    
    
    $caption = '<strong>'. t('Attendees not yet emailed - (!count)', array('!count' => count($attendees))).'</strong>';
+  
+   $result = array('header'=>$header, 'rows'=>$data, 'attributes'=>array(), 'caption'=> $caption, 'colgroups'=>array(),);    
+   
+   $output = theme('table', $result);
+   return $output;
+ }
+ 
+ function _eventbrite_sboc_display_attendee_list_from_db($attendees, $start_date, $end_date){
+   $result = array(); 
+   $data = array();
+   $header = array(
+       array('data' => '#', 'field' => 'ctr'),
+       array('data' => t('Order Id'), 'field' => 'order_id'),
+	   array('data' => t('Order Date'), 'field' => 'create_date'),
+       array('data' => t('Email Address'), 'field' => 'email_address'),
+       array('data' => t('Last Name'), 'field' => 'last_name'),   	
+       array('data' => t('First Name'), 'field' => 'first_name'), 	
+       array('data' => t('Category'), 'field' => 'category'),	
+	   array('data' => t('Email Sent'), 'field' => 'email_sent'),	
+	   array('data' => t('Email Sent On'), 'field' => 'email_send_date'),		   		   
+    );
+	
+   _eventbrite_sboc_get_attendees_from_db_paged($start_date, $end_date);	
+	
+   $ctr = 0;	
+   foreach($attendees as $a){
+     $data[] = array(++$ctr, $a->order_id, $a->create_date, $a->email_address, $a->last_name, $a->first_name, 
+	   $a->category, $a->email_sent, $a->email_send_date,);
+   }  
+   
+   
+   $caption = '<strong>'. t('Attendee count - (!count)', array('!count' => count($attendees))).'</strong>';
   
    $result = array('header'=>$header, 'rows'=>$data, 'attributes'=>array(), 'caption'=> $caption, 'colgroups'=>array(),);    
    
