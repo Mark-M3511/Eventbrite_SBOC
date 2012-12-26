@@ -177,9 +177,7 @@
          array('data' => 'Email Sent', 'field' => 'email_sent',), 
 		 array('data' => 'Email Sent On', 'field' => 'email_send_date',),
 		);
-      $result = _eventbrite_sboc_get_attendees_from_db_paged($start_date, $end_date, $header);
-	  //debug($result);	        
-	  $this->assertTrue($result, 'Return list of attendees from database');
+      $result = _eventbrite_sboc_get_attendees_from_db_paged($start_date, $end_date, $header); 
 	  $data = array();
 	  foreach($result as $row){
 	    $data[] = array($row->order_id, $row->create_date, $row->last_name, $row->first_name, $row->email_address,
@@ -189,6 +187,7 @@
 	  $table = array('header'=>$header, 'rows'=>$data, 'attributes'=>array(), 'caption'=> $caption, 'colgroups'=>array(),'empty' => 'No records returned...',); 
 	  $output = theme('table', $table). theme('pager', array('tags' => array()));
 	  $this->verbose($output);
+	  $this->assertTrue($result, 'Return list of attendees from database');
    }
   
 }

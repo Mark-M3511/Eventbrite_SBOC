@@ -60,10 +60,19 @@
 	$items = array();
 	
 	$items['eventbrite_sboc/kickservice'] = array(
-	  'title' => 'Execute  ',
-	  'description' => 'Landing page for completed SBOC registration on Eventbrite',
+	  'title' => t('Execute'),
+	  'description' => t('Manually execute the service'),
 	  'type'=> MENU_CALLBACK|MENU_NORMAL_ITEM,
 	  'page callback' => '_eventbrite_sboc_kick_service',
+	  'access arguments' => array('administer ebsboc'),
+	);
+	
+	$items['admin/config/system/eventbrite_sboc/attendee_report/%/%'] = array(
+	  'title' => t('Display Report'),
+	  'description' => 'Display attendee list report',
+	  'type'=> MENU_CALLBACK|MENU_NORMAL_ITEM,
+	  'page callback' => '_eventbrite_sboc_display_attendee_list_from_db',
+	  'page arguments' => array(5,6),
 	  'access arguments' => array('administer ebsboc'),
 	);
 	
@@ -72,8 +81,6 @@
     $items['admin/config/system/eventbrite_sboc'] = array(
 	  'title' => 'Configure Eventbrite for SBOC',
 	  'description' => 'Enter Eventbrite API credentials and manage service preferences',
-	  /* 'page callback' => 'drupal_get_form',
-	  'page arguments' => array('_eventbrite_sboc_config_form'), */
 	  'page callback' => '_eventbrite_sboc_build_config_forms',
 	  'access arguments' => array('administer ebsboc'),
 	  'file' => 'eventbrite_sboc_admin_form.inc',
@@ -94,7 +101,7 @@
 		'access arguments' => array('administer ebsboc'),
 		'file' => 'eventbrite_sboc_admin_form.inc',
 	    'file path' => drupal_get_path('module', 'eventbrite_sboc'). '/includes',	
-		'weight' => 1,
+		'weight' => 10,
 	);
 	
 	$items['admin/config/system/eventbrite_sboc/api_attendee_list/1'] = array(
@@ -106,8 +113,22 @@
 		'access arguments' => array('administer ebsboc'),
 		'file' => 'eventbrite_sboc_admin_form.inc',
 	    'file path' => drupal_get_path('module', 'eventbrite_sboc'). '/includes',	
-		'weight' => 2,
+		'weight' => 20,
 	);
+	
+	$items['admin/config/system/eventbrite_sboc/attendee_report'] = array(
+		'title' => 'Report',
+		'type' =>  MENU_LOCAL_TASK | MENU_CALLBACK,
+		'description' => 'Run attendee report',
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array('_eventbrite_sboc_config_form4'),
+		'access arguments' => array('administer ebsboc'),
+		'file' => 'eventbrite_sboc_admin_form.inc',
+	    'file path' => drupal_get_path('module', 'eventbrite_sboc'). '/includes',	
+		'weight' => 30,
+	);
+	
+	//_eventbrite_sboc_config_form4
 	
 	$items['admin/config/system/eventbrite_sboc/email'] = array(
 		'title' => 'Email Contact',
@@ -117,7 +138,7 @@
 		'access arguments' => array('administer ebsboc'),
 		'file' => 'eventbrite_sboc_admin_form.inc',
 	    'file path' => drupal_get_path('module', 'eventbrite_sboc'). '/includes',	
-		'weight' => 3,
+		'weight' => 40,
 	);
 	
 	$items['admin/config/system/eventbrite_sboc/debug'] = array(
@@ -129,7 +150,7 @@
 		'access arguments' => array('administer ebsboc'),
 		'file' => 'eventbrite_sboc_admin_form.inc',
 	    'file path' => drupal_get_path('module', 'eventbrite_sboc'). '/includes',	
-		'weight' => 4,
+		'weight' => 50,
 	);
 	
 	$items['eventbrite_sboc/logout'] = array(
@@ -673,36 +694,41 @@
    return $output;
  }
  
- function _eventbrite_sboc_display_attendee_list_from_db($attendees, $start_date, $end_date){
+ function _eventbrite_sboc_display_attendee_list_from_db($start_date, $end_date){
    $result = array(); 
    $data = array();
-   $header = array(
-       array('data' => '#', 'field' => 'ctr'),
-       array('data' => t('Order Id'), 'field' => 'order_id'),
-	   array('data' => t('Order Date'), 'field' => 'create_date'),
-       array('data' => t('Email Address'), 'field' => 'email_address'),
-       array('data' => t('Last Name'), 'field' => 'last_name'),   	
-       array('data' => t('First Name'), 'field' => 'first_name'), 	
-       array('data' => t('Category'), 'field' => 'category'),	
-	   array('data' => t('Email Sent'), 'field' => 'email_sent'),	
-	   array('data' => t('Email Sent On'), 'field' => 'email_send_date'),		   		   
-    );
+   $header = array( 
+	     array('data' => 'Order Id', 'field' => 'order_id', 'sort' => 'desc'),
+		 array('data' => 'Order Date', 'field' => 'create_date',),		 
+		 array('data' => 'Last Name', 'field' => 'last_name',),
+		 array('data' => 'First Name', 'field' => 'first_name', ),
+		 array('data' => 'Email Address', 'field' => 'email_address',), 
+		 array('data' => 'Category', 'field' => 'category',),
+         array('data' => 'Email Sent', 'field' => 'email_sent',), 
+		 array('data' => 'Email Sent On', 'field' => 'email_send_date',),
+	);
 	
-   _eventbrite_sboc_get_attendees_from_db_paged($start_date, $end_date);	
+   $attendees = _eventbrite_sboc_get_attendees_from_db_paged($start_date, $end_date, $header);
 	
    $ctr = 0;	
    foreach($attendees as $a){
-     $data[] = array(++$ctr, $a->order_id, $a->create_date, $a->email_address, $a->last_name, $a->first_name, 
+     $ctr++;
+     $data[] = array($a->order_id, $a->create_date, $a->email_address, $a->last_name, $a->first_name, 
 	   $a->category, $a->email_sent, $a->email_send_date,);
-   }  
-   
+   }     
    
    $caption = '<strong>'. t('Attendee count - (!count)', array('!count' => count($attendees))).'</strong>';
   
-   $result = array('header'=>$header, 'rows'=>$data, 'attributes'=>array(), 'caption'=> $caption, 'colgroups'=>array(),);    
+   $table = array('header'=>$header, 'rows'=>$data, 'attributes'=>array(), 'caption'=> $caption, 'colgroups'=>array(),);    
    
-   $output = theme('table', $result);
-   return $output;
+   $attendee_list = theme('table', $table);
+   $attendee_list .= theme('pager', array('tags' => array()));
+   
+   $params = array(
+      'attendee_list' => $attendee_list, 
+	  'attendee_list_count' => count($attendees),
+   );	
+   return theme('attendee_list', $params);  
  }
  
  function _eventbrite_sboc_mime_type($ext){

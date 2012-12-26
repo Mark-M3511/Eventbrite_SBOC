@@ -10,6 +10,7 @@ files[] = test/eventbrite_sboc.test
 ;dependencies - other projects that are required to make this one work
 dependencies[] = mailsystem
 dependencies[] = mimemail
-
+;stylesheets
+stylesheets[all][] = css/eventbrite_sboc_style.css
 ;version info
 version = '7.x-1.1-dev'

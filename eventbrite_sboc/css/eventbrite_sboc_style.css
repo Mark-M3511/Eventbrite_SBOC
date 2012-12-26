@@ -1,0 +1,8 @@
+/*eventbrite_sboc_style.css*/
+
+.form-item.form-item-eventbrite-sboc-year-start, .form-item.form-item-eventbrite-sboc-month-start,
+.form-item.form-item-eventbrite-sboc-year-end, .form-item.form-item-eventbrite-sboc-month-end
+{
+  float: left; 
+  margin: 0px 40px 2px 2px;
+}
