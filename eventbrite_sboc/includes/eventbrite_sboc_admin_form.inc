@@ -418,7 +418,7 @@ function _eventbrite_sboc_config_form4($form, &$form_state){
      form_set_error('End Date', t('The end date is invalid: %d', array('%d' => $end_date,))); 
    } 
    if ($good_dates){
-	  drupal_set_message(t('Date Range: %d1 and %d2', array('%d1' => $start_date, '%d2' => $end_date, )), 'status');
+	  // drupal_set_message(t('Date Range: %d1 and %d2', array('%d1' => $start_date, '%d2' => $end_date, )), 'status');
 	  $form_state['redirect'] = "admin/config/system/eventbrite_sboc/attendee_report/$start_date/$end_date";	 
    }
  }
