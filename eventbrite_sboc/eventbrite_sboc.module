@@ -18,7 +18,9 @@
  define('EVENTBRITE_SBOC_REGISTRATION_LOW_DATE',  date('Y-m-d',strtotime('yesterday')));
  define('EVENTBRITE_SBOC_MAIL_KEY', 'send_manuals');
  define('EVENTBRITE_SBOC_MODULE_NAME', 'eventbrite_sboc');
- define('EVENTBRITE_SBOC_MODULE_API_AUTH_PATH', 'admin/config/system/eventbrite_sboc/api_auth');
+ define('EVENTBRITE_SBOC_API_AUTH_PATH', 'admin/config/system/eventbrite_sboc/api_auth');
+ define('EVENTBRITE_SBOC_EXTRA_MESSAGE_1', ' The coaching and pronunciation CD will be mailed in January');
+ define('EVENTBRITE_SBOC_ORDER_STATUS', 'PayPal Completed');
 
  /**
  * Implementation of hook_help
@@ -221,7 +223,7 @@
 	_eventbrite_sboc_process_emails($email);	
  }
  
-  function _eventbrite_sboc_authorization_api(){
+ function _eventbrite_sboc_authorization_api(){
    $eventbrite_api_key =  _eventbrite_sboc_api_key();
    $eventbrite_api_user_key = _eventbrite_sboc_api_user_key();
    $eventbrite_oauth_key = _eventbrite_sboc_oauth_key();  
@@ -345,8 +347,8 @@
       'attendee_list' => $attendee_list, 
 	  'attendee_list_count' => count($eb_attendee_list->attendees),
     );
-	
-   return theme('attendee_list', $params);  
+   
+   return theme('attendee_list', $params);
  }
  
  function _eventbrite_sboc_debug($user_func, $args = array()){
@@ -378,7 +380,9 @@
 	$_SESSION['attendees'] = array();
 	$_SESSION['attendees_in_db'] = _eventbrite_sboc_get_attendees_from_db();
 	foreach($attendees as $a){
-	  if (substr($a->attendee->created, 0, 10) >= EVENTBRITE_SBOC_REGISTRATION_LOW_DATE && !_eventbrite_sboc_search_saved_attendees($_SESSION['attendees_in_db'], $a->attendee->id)){ 	 
+	  if (substr($a->attendee->created, 0, 10) >= EVENTBRITE_SBOC_REGISTRATION_LOW_DATE && 
+	  !_eventbrite_sboc_search_saved_attendees($_SESSION['attendees_in_db'], $a->attendee->id) 
+	  && $a->attendee->order_type == EVENTBRITE_SBOC_ORDER_STATUS){ 	 
 	    $newAttendee = new stdClass;
 	    $newAttendee->last_name = $a->attendee->last_name;
 	    $newAttendee->first_name = $a->attendee->first_name;	  
@@ -441,12 +445,26 @@
    ->orderByHeader($header)
    ->fields('e', array('order_id', 'create_date', 'last_name', 'first_name', 'email_address', 'category', 'email_sent', 'email_send_date',))   
    ->orderBy('attendee_id', EVENTBRITE_SBOC_LIST_SORT_ORDER)
-   /* ->range(0, 50) */
    ->execute()
    ->fetchAll()
    ;   
    //return (string)$result;
    return $result;
+ } 
+ 
+ function _eventbrite_sboc_get_attendees_from_db_paged_count($start_date, $end_date){  
+   $start_date = check_plain($start_date);
+   $end_date = check_plain($end_date);
+   $start_date = date('Y-m-d',strtotime($start_date));
+   $end_date = date('Y-m-d',strtotime($end_date));
+   
+   $result = db_select('eventbrite_sboc_attendees', 'e')  
+   ->where('(e.event_id = \''. _eventbrite_sboc_event_id(). '\') AND (DATE_FORMAT(e.create_date,\'%Y-%m-%d\') BETWEEN \''. $start_date . '\' AND \''.$end_date .'\')' )
+   ->fields('e')   
+   ->orderBy('attendee_id', EVENTBRITE_SBOC_LIST_SORT_ORDER)
+   ->execute();   
+   
+   return $result->rowCount();
  } 
 
  function _eventbrite_sboc_answer_id($answers, $question_id){
@@ -647,7 +665,7 @@
    $result = '';
    switch ($registration_type){
      case 'P':
-	   $result = ' The coaching and pronunciation CD will be mailed in January';
+	   $result = EVENTBRITE_SBOC_EXTRA_MESSAGE_1;
 	   break;
 	 case 'S':
 	   break;
@@ -703,20 +721,24 @@
 	   array('data' => t('Region'), 'field' => 'region'),	
 	   array('data' => t('Amount Paid'), 'field' => 'amount_paid'),	
 	   array('data' => t('Order Status'), 'field' => 'order_type'),			   
-    );
-	
+    );	
+   
    $ctr = 0;	
    foreach($attendees as $a){
      $data[] = array(++$ctr, $a->order_id, $a->created, $a->email, $a->last_name, $a->first_name, 
 	   $a->category_name, $a->region, $a->amount_paid, $a->order_type,);
    }  
    
-   
+   $current_page = pager_default_initialize(count($attendees), 10);   
+   $chunks = array_chunk($data, 10, TRUE);  
+	  
    $caption = '<strong>'. t('Attendees not yet emailed - (!count)', array('!count' => count($attendees))).'</strong>';
   
-   $result = array('header'=>$header, 'rows'=>$data, 'attributes'=>array(), 'caption'=> $caption, 'colgroups'=>array(),);    
+   $result = array('header'=>$header, 'rows'=>$chunks[$current_page], 'attributes'=>array(), 'caption'=> $caption, 'colgroups'=>array(),);    
    
-   $output = theme('table', $result);
+   $output = theme('table', $result);   
+   $output .= theme('pager', array('quantity', count($attendees)));
+   
    return $output;
  }
  
@@ -724,7 +746,9 @@
    $result = array(); 
    $data = array();
    $header = array( 
-	     array('data' => t('Order Id'), 'field' => 'order_id', 'sort' => 'desc'),
+        /*  array('data' => t('#'), 'field' => 'eid', 'sort' => 'desc'), */
+		 array('data' => t('#'),),
+	     array('data' => t('Order Id'), 'field' => 'order_id',),
 		 array('data' => t('Order Date'), 'field' => 'create_date',),		 
 		 array('data' => t('Last Name'), 'field' => 'last_name',),
 		 array('data' => t('First Name'), 'field' => 'first_name', ),
@@ -738,13 +762,15 @@
 	
    $ctr = 0;	
    foreach($attendees as $a){
-     $ctr++;
-     $data[] = array($a->order_id, $a->create_date, $a->email_address, $a->last_name, $a->first_name, 
-	   $a->category, $a->email_sent, $a->email_send_date,);
+     /* $ctr++; */
+     $data[] = array(++$ctr, $a->order_id, date('Y-m-d', strtotime($a->create_date)), $a->email_address, 
+	 $a->last_name, $a->first_name, $a->category, $a->email_sent, $a->email_send_date,);
    }     
    
-   // $caption = '<strong>'. t('Attendee count - (!count)', array('!count' => count($attendees))).'</strong>';
-   $caption = '';
+   $link = url('admin/config/system/eventbrite_sboc/attendee_report');
+   $count = _eventbrite_sboc_get_attendees_from_db_paged_count($start_date, $end_date);
+   $caption = '<strong>'. t('Attendee count - (!count) - <a href="!link">New Report</a>', array('!count' => $count,
+   '!link' => $link)).'</strong>';
   
    $table = array('header'=>$header, 'rows'=>$data, 'attributes'=>array(), 'caption'=> $caption, 'colgroups'=>array(),);    
    
