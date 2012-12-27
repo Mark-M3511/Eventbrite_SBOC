@@ -107,7 +107,7 @@
 	);
 	
 	$items['admin/config/system/eventbrite_sboc/api_attendee_list/1'] = array(
-		'title' => 'Attendee List',
+		'title' => 'Attendees - Pending',
 		'type' =>  MENU_LOCAL_TASK | MENU_CALLBACK,
 		'description' => 'Eventbrite API calls - Attendee List',		
 		'page callback' => '_eventbrite_sboc_get_attendee_list',
@@ -119,9 +119,9 @@
 	);
 	
 	$items['admin/config/system/eventbrite_sboc/attendee_report'] = array(
-		'title' => 'Report',
+		'title' => 'Attendees - Confirmed',
 		'type' =>  MENU_LOCAL_TASK | MENU_CALLBACK,
-		'description' => 'Run attendee report',
+		'description' => 'Run attendees report',
 		'page callback' => 'drupal_get_form',
 		'page arguments' => array('_eventbrite_sboc_config_form4'),
 		'access arguments' => array('administer ebsboc'),
