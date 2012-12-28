@@ -713,20 +713,22 @@
  
   function _eventbrite_sboc_sort_pending($a, $b){
     $result = -1;
-    $sort = check_plain($_GET['sort']);
+    $sort = strtoupper(check_plain($_GET['sort']));
     $order = t(check_plain($_GET['order']));
 	$header = array('#', t('Order Id'), t('Created'), t('Email Address'), t('Last Name'), t('First Name'),
        t('Category'), t('Region'), t('Amount Paid'), t('Order Status'),);
     $key =  array_search($order, $header);	
+	$a_el = strtoupper($a[$key]);
+	$b_el = strtoupper($b[$key]);
     if ($key !== FALSE)	{
 	   try {
-	     if ($a[$key] == $b[$key]){
+	     if ($a_el == $b_el){
            $result = 0;
          }else{
-           if (strtoupper($sort) == 'ASC'){
-             $result = ($a[$key] > $b[$key]) ? 1 : -1;
+           if ($sort == 'ASC'){
+             $result = ($a_el > $b_el) ? 1 : -1;
 	       }else{
-	         $result = ($a[$key] < $b[$key]) ? 1 : -1;
+	         $result = ($a_el < $b_el) ? 1 : -1;
 	       }
          }
        }catch(Exception $e){
@@ -762,7 +764,6 @@
    $current_page = pager_default_initialize(count($attendees), EVENTBRITE_SBOC_PAGE_LIMIT);   
    $chunks = array_chunk($data, EVENTBRITE_SBOC_PAGE_LIMIT, TRUE); 
 
-   /****Is there a sort query****/
    if (isset($_GET['sort']) && isset($_GET['order'])){
 	  usort($chunks[$current_page], "_eventbrite_sboc_sort_pending");
    }   
