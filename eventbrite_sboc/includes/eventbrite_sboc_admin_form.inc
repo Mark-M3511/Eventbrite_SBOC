@@ -409,16 +409,20 @@ function _eventbrite_sboc_config_form4($form, &$form_state){
    $end_date .= '-'. str_pad($form_state['values']['eventbrite_sboc_day_end'], 2, '0', STR_PAD_LEFT);
    
    $good_dates = TRUE;
-   if (strtotime($start_date) === FALSE){
+   //9999-99-99
+   if (checkdate((int)substr($start_date,5,2), (int)substr($start_date,8,2), (int)substr($start_date,0,4)) == FALSE){
      $good_dates = FALSE;
-     form_set_error('Start Date', t('The end date is invalid: %d', array('%d' => $start_date,)));
+     form_set_error('Start Date', t('The start date is invalid: %d', array('%d' => $start_date,)));
    }
-   if (strtotime($end_date) === FALSE){
+   if (checkdate((int)substr($end_date,5,2), (int)substr($end_date,8,2), (int)substr($end_date,0,4)) == FALSE){
      $good_dates = FALSE;
      form_set_error('End Date', t('The end date is invalid: %d', array('%d' => $end_date,))); 
    } 
+   if (($good_dates) && (strtotime($end_date) < strtotime($start_date))){
+      $good_dates = FALSE;
+      form_set_error('Date Sequence', t('Date sequence is incorrect. Start \'%d1\' later than End \'%d2\'', array('%d1' => $start_date,'%d2' => $end_date,))); 
+   }
    if ($good_dates){
-	  // drupal_set_message(t('Date Range: %d1 and %d2', array('%d1' => $start_date, '%d2' => $end_date, )), 'status');
 	  $form_state['redirect'] = "admin/config/system/eventbrite_sboc/attendee_report/$start_date/$end_date";	 
    }
  }
