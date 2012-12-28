@@ -17,10 +17,13 @@
  define('EVENTBRITE_SBOC_REGISTRATION_AMT_STD', 28);
  define('EVENTBRITE_SBOC_REGISTRATION_LOW_DATE',  date('Y-m-d',strtotime('yesterday')));
  define('EVENTBRITE_SBOC_MAIL_KEY', 'send_manuals');
- define('EVENTBRITE_SBOC_MODULE_NAME', 'eventbrite_sboc');
+ //define('EVENTBRITE_SBOC_MODULE_NAME', 'eventbrite_sboc'); 
+ define('EVENTBRITE_SBOC_MODULE_NAME', basename(__FILE__,'.module'));
  define('EVENTBRITE_SBOC_API_AUTH_PATH', 'admin/config/system/eventbrite_sboc/api_auth');
  define('EVENTBRITE_SBOC_EXTRA_MESSAGE_1', ' The coaching and pronunciation CD will be mailed in January');
  define('EVENTBRITE_SBOC_ORDER_STATUS', 'PayPal Completed');
+ define('EVENTBRITE_SBOC_PAGE_LIMIT', 10);
+ define('EVENTBRITE_SBOC_DATE_SUB_PART', 10);
 
  /**
  * Implementation of hook_help
@@ -81,7 +84,7 @@
 	/********************************Administrative links below***********************************/
 	
     $items['admin/config/system/eventbrite_sboc'] = array(
-	  'title' => 'Configure Eventbrite for SBOC',
+	   'title' => 'Configure Eventbrite for SBOC',
 	  'description' => 'Enter Eventbrite API credentials and manage service preferences',
 	  'page callback' => '_eventbrite_sboc_build_config_forms',
 	  'access arguments' => array('administer ebsboc'),
@@ -133,7 +136,7 @@
 	//_eventbrite_sboc_config_form4
 	
 	$items['admin/config/system/eventbrite_sboc/email'] = array(
-		'title' => 'Email Contact',
+		'title' => 'Email Settings',
 		'type' =>  MENU_LOCAL_TASK | MENU_CALLBACK,
 		'description' => 'Email Contact',
 		'page callback' => '_eventbrite_sboc_build_email_test_forms',
@@ -195,7 +198,7 @@
  /**** Code specific to ulitmate cron module ****/  
  // '*/15 * * * *';   
  /* 
- function _eventbrite_sboc_mymodule_cronapi(($op, $job = NULL){  
+ function _eventbrite_sboc_cronapi($op, $job = NULL){  
    switch($op) {
     case 'list':
       return array(
@@ -204,7 +207,8 @@
 
     case 'rule':
       switch($job) {
-        case '_eventbrite_sboc_cronjob_1': return '';
+        case '_eventbrite_sboc_cronjob_1': 
+		  return '';
       );
 
     case 'execute':
@@ -293,7 +297,7 @@
    }
    else {
       if (EVENTBRITE_SBOC_LIST_SORT_ORDER == 'ASC'){
-        $result = ($a->attendee->id < $b->attendee->id) ? -1 : 1;
+        $result = ($a->attendee->id > $b->attendee->id) ? 1 : -1;
 	  }else{
 	    $result = ($a->attendee->id < $b->attendee->id) ? 1 : -1;
 	  }
@@ -380,7 +384,7 @@
 	$_SESSION['attendees'] = array();
 	$_SESSION['attendees_in_db'] = _eventbrite_sboc_get_attendees_from_db();
 	foreach($attendees as $a){
-	  if (substr($a->attendee->created, 0, 10) >= EVENTBRITE_SBOC_REGISTRATION_LOW_DATE && 
+	  if (substr($a->attendee->created, 0, EVENTBRITE_SBOC_DATE_SUB_PART) >= EVENTBRITE_SBOC_REGISTRATION_LOW_DATE && 
 	  !_eventbrite_sboc_search_saved_attendees($_SESSION['attendees_in_db'], $a->attendee->id) 
 	  && $a->attendee->order_type == EVENTBRITE_SBOC_ORDER_STATUS){ 	 
 	    $newAttendee = new stdClass;
@@ -390,7 +394,7 @@
 	    $newAttendee->id = $a->attendee->id;
 	    $newAttendee->event_id = $a->attendee->event_id;
 	    $newAttendee->order_id = $a->attendee->order_id;
-		$newAttendee->created = substr($a->attendee->created, 0, 10);		
+		$newAttendee->created = substr($a->attendee->created, 0, EVENTBRITE_SBOC_DATE_SUB_PART);		
 	    $newAttendee->amount_paid = $a->attendee->amount_paid;
 	    $newAttendee->registration_type = ($a->attendee->amount_paid > EVENTBRITE_SBOC_REGISTRATION_AMT_STD ? 'Premium' : 'Standard');
 	    $newAttendee->ans_id = _eventbrite_sboc_answer_id($a->attendee->answers, EVENTBRITE_SBOC_QUESTION_ID_CATEGORY);
@@ -707,6 +711,32 @@
    return $result;
  }
  
+  function _eventbrite_sboc_sort_pending($a, $b){
+    $result = -1;
+    $sort = check_plain($_GET['sort']);
+    $order = t(check_plain($_GET['order']));
+	$header = array('#', t('Order Id'), t('Created'), t('Email Address'), t('Last Name'), t('First Name'),
+       t('Category'), t('Region'), t('Amount Paid'), t('Order Status'),);
+    $key =  array_search($order, $header);	
+    if ($key !== FALSE)	{
+	   try {
+	     if ($a[$key] == $b[$key]){
+           $result = 0;
+         }else{
+           if (strtoupper($sort) == 'ASC'){
+             $result = ($a[$key] > $b[$key]) ? 1 : -1;
+	       }else{
+	         $result = ($a[$key] < $b[$key]) ? 1 : -1;
+	       }
+         }
+       }catch(Exception $e){
+          watchdog(EVENTBRITE_SBOC_MODULE_NAME, $e->getMessage(), array(), WATCHDOG_ERROR);
+       }
+	}
+    
+    return $result;
+ }
+ 
  function _eventbrite_sboc_display_attendee_list($attendees){
    $result = array(); 
    $data = array();
@@ -729,8 +759,13 @@
 	   $a->category_name, $a->region, $a->amount_paid, $a->order_type,);
    }  
    
-   $current_page = pager_default_initialize(count($attendees), 10);   
-   $chunks = array_chunk($data, 10, TRUE);  
+   $current_page = pager_default_initialize(count($attendees), EVENTBRITE_SBOC_PAGE_LIMIT);   
+   $chunks = array_chunk($data, EVENTBRITE_SBOC_PAGE_LIMIT, TRUE); 
+
+   /****Is there a sort query****/
+   if (isset($_GET['sort']) && isset($_GET['order'])){
+	  usort($chunks[$current_page], "_eventbrite_sboc_sort_pending");
+   }   
 	  
    $caption = '<strong>'. t('Attendees not yet emailed - (!count)', array('!count' => count($attendees))).'</strong>';
   
@@ -762,7 +797,6 @@
 	
    $ctr = 0;	
    foreach($attendees as $a){
-     /* $ctr++; */
      $data[] = array(++$ctr, $a->order_id, date('Y-m-d', strtotime($a->create_date)), $a->email_address, 
 	 $a->last_name, $a->first_name, $a->category, $a->email_sent, $a->email_send_date,);
    }     
