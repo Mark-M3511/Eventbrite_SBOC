@@ -305,7 +305,7 @@
  }
 
  function _eventbrite_sboc_admin_send_email($email_address) {
-   _eventbrite_sboc_get_attendee_list();
+   _eventbrite_sboc_get_pending_list();
    _eventbrite_sboc_process_emails($email_address);
  }
  
@@ -331,8 +331,9 @@ function _eventbrite_sboc_config_form4($form, &$form_state){
 		'#title' => t('Select Start and End Dates for report'),
 	);
 
-	$start_year = (int)date('Y')+ 1;
-	for($ctr = $start_year; $ctr >= $start_year - 5; $ctr--) {
+	$end_year = (int)date('Y')+ 1;
+	$start_year = $end_year -5;
+	for($ctr = $end_year; $ctr >= $start_year; $ctr--) {
 	  $years[] =  $ctr;
 	} 
 	

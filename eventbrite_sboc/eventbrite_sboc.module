@@ -109,11 +109,12 @@
 		'weight' => 10,
 	);
 	
-	$items['admin/config/system/eventbrite_sboc/api_attendee_list/1'] = array(
+	/* $items['admin/config/system/eventbrite_sboc/api_attendee_list/1'] = array( */
+	$items['admin/config/system/eventbrite_sboc/api_pending_list/1'] = array(
 		'title' => 'Attendees - Pending',
 		'type' =>  MENU_LOCAL_TASK | MENU_CALLBACK,
 		'description' => 'Eventbrite API calls - Attendee List',		
-		'page callback' => '_eventbrite_sboc_get_attendee_list',
+		'page callback' => '_eventbrite_sboc_get_pending_list',
 		'page arguments' => array(5),
 		'access arguments' => array('administer ebsboc'),
 		'file' => 'eventbrite_sboc_admin_form.inc',
@@ -188,7 +189,7 @@
  
  function _eventbrite_sboc_email_auto_sender($data){ 
     if (variable_get('eventbrite_sboc_app_state', 0) == 1) {
-       _eventbrite_sboc_get_attendee_list();
+       _eventbrite_sboc_get_pending_list();
 	   _eventbrite_sboc_process_emails($data);
     }else{
 	  watchdog(EVENTBRITE_SBOC_MODULE_NAME, t('Service is disabled'), array(), WATCHDOG_NOTICE);	 
@@ -223,7 +224,7 @@
  /**** Code specific to ulitmate cron module ****/
  
  function _eventbrite_sboc_kick_service($email=''){    
-    _eventbrite_sboc_get_attendee_list();
+    _eventbrite_sboc_get_pending_list();
 	_eventbrite_sboc_process_emails($email);	
  }
  
@@ -305,7 +306,7 @@
    return $result;
  }
 
- function _eventbrite_sboc_get_attendee_list($display_list = 0){
+ function _eventbrite_sboc_get_pending_list($display_list = 0){
    $result = array();  
    $event_id = array('id' => _eventbrite_sboc_event_id());    
    $eb_client = NULL;
@@ -346,7 +347,7 @@
 	);	  
    _eventbrite_sboc_debug('_eventbrite_sboc_debug_lists', $params); 
    
-   $attendee_list = _eventbrite_sboc_display_attendee_list($_SESSION['attendees']);
+   $attendee_list = _eventbrite_sboc_display_pending_list($_SESSION['attendees']);
    $params = array(
       'attendee_list' => $attendee_list, 
 	  'attendee_list_count' => count($eb_attendee_list->attendees),
@@ -739,7 +740,7 @@
     return $result;
  }
  
- function _eventbrite_sboc_display_attendee_list($attendees){
+ function _eventbrite_sboc_display_pending_list($attendees){
    $result = array(); 
    $data = array();
    $header = array(
@@ -757,8 +758,7 @@
    
    $ctr = 0;	
    foreach($attendees as $a){
-     $data[] = array(++$ctr, $a->order_id, $a->created, $a->email, $a->last_name, $a->first_name, 
-	   $a->category_name, $a->region, $a->amount_paid, $a->order_type,);
+     $data[] = array(++$ctr, $a->order_id, $a->created, $a->email, strtoupper($a->last_name), strtoupper($a->first_name), $a->category_name, $a->region, $a->amount_paid, $a->order_type,);
    }  
    
    $current_page = pager_default_initialize(count($attendees), EVENTBRITE_SBOC_PAGE_LIMIT);   
@@ -786,9 +786,9 @@
 		 array('data' => t('#'),),
 	     array('data' => t('Order Id'), 'field' => 'order_id',),
 		 array('data' => t('Order Date'), 'field' => 'create_date',),		 
-		 array('data' => t('Last Name'), 'field' => 'last_name',),
-		 array('data' => t('First Name'), 'field' => 'first_name', ),
-		 array('data' => t('Email Address'), 'field' => 'email_address',), 
+		 array('data' => t('Email Address'), 'field' => 'last_name',),
+		 array('data' => t('Last Name'), 'field' => 'first_name', ),
+		 array('data' => t('First Name'), 'field' => 'email_address',), 
 		 array('data' => t('Category'), 'field' => 'category',),
          array('data' => t('Email Sent'), 'field' => 'email_sent',), 
 		 array('data' => t('Email Sent On'), 'field' => 'email_send_date',),
@@ -799,8 +799,12 @@
    $ctr = 0;	
    foreach($attendees as $a){
      $data[] = array(++$ctr, $a->order_id, date('Y-m-d', strtotime($a->create_date)), $a->email_address, 
-	 $a->last_name, $a->first_name, $a->category, $a->email_sent, $a->email_send_date,);
+	 strtoupper($a->last_name), strtoupper($a->first_name), $a->category, $a->email_sent, $a->email_send_date,);
    }     
+   
+   /********Add sorting routine here*******/
+   
+   /********Add sorting routine here*******/
    
    $link = url('admin/config/system/eventbrite_sboc/attendee_report');
    $count = _eventbrite_sboc_get_attendees_from_db_paged_count($start_date, $end_date);
@@ -815,8 +819,8 @@
    $params = array(
       'attendee_list' => $attendee_list, 
 	  'attendee_list_count' => count($attendees),
-	  'start_date' => $start_date,
-	  'end_date' => $end_date,
+	  'start_date' => date('Y-M-d',strtotime($start_date)),
+	  'end_date' => date('Y-M-d', strtotime($end_date)),
    );	
    return theme('attendee_list_from_db', $params);  
  }
