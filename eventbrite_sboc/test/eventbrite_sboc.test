@@ -2,14 +2,14 @@
  /**
  * Unit and Functional testing for Eventbrite SBOC module
  */
- class EventbriteSBOCUnitTestCase extends DrupalWebTestCase{
+ class EventbriteSBOCWebTestCase extends DrupalWebTestCase{
  
    protected $privileged_user;
  
    public static function getInfo() {
 		return array(
-			'name' => 'Eventbrite SBOC Automated Functional Test Cases',
-			'description' => 'Unit and Functional test cases',
+			'name' => 'Eventbrite SBOC Functional Web Tests',
+			'description' => 'Eventbrite SBOC Functional Testing - extending DrupalWebTestCase',
 			'group' => 'Eventbrite SBOC',
         );
    }
@@ -83,41 +83,6 @@
 	 $this->drupalPost('https://www.eventbrite.ca/login/', $edit, t('Log in'));
    }
    
-   public function testEBAPIConnectivity_UserAccount_Negative(){
-     variable_set('eventbrite_api_key', '');
-	 variable_set('eventbrite_api_user_key', '');
-	 variable_set('eventbrite_oauth_key', '');
-	 variable_set('eventbrite_sboc_api_user_email', '');
-	 variable_set('eventbrite_sboc_api_user_password', '');
-	 $auth_key = array(
-       'client_secret' => variable_get('eventbrite_oauth_key', ''),     
-	   'access_token' => NULL,
-	   'client_id' =>  variable_get('eventbrite_api_key', ''),
-	   'app_key' =>  variable_get('eventbrite_api_key', ''),
-	   'user_key' => variable_get('eventbrite_api_user_key', ''),
-     );
-	 $user_email = variable_get('eventbrite_sboc_api_user_email', '');
-	 $user_pwd = variable_get('eventbrite_sboc_api_user_password', '');
-	 unset($auth_key['access_token']);
-	 $eb_client = new Eventbrite($auth_key, $user_email, $user_pwd);
-	 $this->assertTrue($eb_client, 'Log in using incorrect UID/Pwd credentials should return valid object');
-   }
-   
-   public function testEBAPIConnectivity_OAuth2_0_Negative(){
-     variable_set('eventbrite_api_key', '');
-	 variable_set('eventbrite_api_user_key', '');
-	 variable_set('eventbrite_oauth_key', '');
-	 $auth_key = array(
-       'client_secret' => variable_get('eventbrite_oauth_key', ''),     
-	   'access_token' => NULL,
-	   'client_id' =>  variable_get('eventbrite_api_key', ''),
-	   'app_key' =>  variable_get('eventbrite_api_key', ''),
-	   'user_key' => variable_get('eventbrite_api_user_key', ''),
-     );
-	 $eb_client = new Eventbrite($auth_key);
-	 $this->assertTrue($eb_client, 'Log in using OAuth 2.0 protocol and invalid values should return valid EB API object');
-   }
-   
    public function testRetrieveAttendeesList(){
      variable_set('eventbrite_api_key', $this->randomName(20));
 	 variable_set('eventbrite_api_user_key', $this->randomName(30));
@@ -134,7 +99,7 @@
      );
 	 $output = '';
 	 try {
-	   $output = _eventbrite_sboc_get_attendee_list();
+	   $output = _eventbrite_sboc_get_pending_list();
 	 }catch(Exception $e){
 	   drupal_set_message(t('Exception thrown: %message', array('%message' => $e->getMessage(),)), 'error');
 	 }
@@ -191,3 +156,29 @@
    }
   
 }
+  
+ class EventbriteSBOCFormsTestCase extends DrupalWebTestCase{
+   protected $privileged_user;
+ 
+   public static function getInfo() {
+		return array(
+			'name' => 'Eventbrite SBOC Form Tests',
+			'description' => 'Eventbrite SBOC Functional Testing - extending FormsTestCase',
+			'group' => 'Eventbrite SBOC',
+        );
+   }
+  
+   public function setUp() {     
+     parent::setUp(array('mailsystem', 'mimemail','eventbrite_sboc',));
+	 $this->privileged_user = $this->drupalCreateUser(array('administer ebsboc'));
+     $this->drupalLogin($this->privileged_user);
+   }   
+   
+   public function testAntendeesConfirmedForm(){
+     $this->drupalGet('admin/config/system/eventbrite_sboc/attendee_report');
+	 $this->assertText(t('Select Start and End Dates for report'));
+   }
+    
+   
+ }
+  

@@ -17,7 +17,6 @@
  define('EVENTBRITE_SBOC_REGISTRATION_AMT_STD', 28);
  define('EVENTBRITE_SBOC_REGISTRATION_LOW_DATE',  date('Y-m-d',strtotime('yesterday')));
  define('EVENTBRITE_SBOC_MAIL_KEY', 'send_manuals');
- //define('EVENTBRITE_SBOC_MODULE_NAME', 'eventbrite_sboc'); 
  define('EVENTBRITE_SBOC_MODULE_NAME', basename(__FILE__,'.module'));
  define('EVENTBRITE_SBOC_API_AUTH_PATH', 'admin/config/system/eventbrite_sboc/api_auth');
  define('EVENTBRITE_SBOC_EXTRA_MESSAGE_1', ' The coaching and pronunciation CD will be mailed in January');
@@ -192,7 +191,7 @@
        _eventbrite_sboc_get_pending_list();
 	   _eventbrite_sboc_process_emails($data);
     }else{
-	  watchdog(EVENTBRITE_SBOC_MODULE_NAME, t('Service is disabled'), array(), WATCHDOG_NOTICE);	 
+	  /* watchdog(EVENTBRITE_SBOC_MODULE_NAME, t('Service is disabled'), array(), WATCHDOG_NOTICE); */	 
 	}
  }
  

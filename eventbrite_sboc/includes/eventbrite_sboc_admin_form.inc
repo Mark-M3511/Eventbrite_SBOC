@@ -13,12 +13,11 @@
  * Settings form for menu callback
  */
  
- define('EVENTBRITE_SBOC_MODULE_DEBUG_SEND_LIMIT', 5);
+ define('EVENTBRITE_SBOC_MODULE_DEBUG_SEND_LIMIT', 11);
  
  require_once(drupal_get_path('module', 'eventbrite_sboc'). '/includes/eventbrite_sboc_helpers.inc');
  
  function _eventbrite_sboc_build_config_forms(){ 
-    // drupal_render(drupal_get_form('_eventbrite_sboc_config_form2'));
 	$output = drupal_render(drupal_get_form('_eventbrite_sboc_debug_config_form_api_credentials'));
 	$output .= drupal_render(drupal_get_form('_eventbrite_sboc_debug_config_form_client_credentials'));	
 	$output .= drupal_render(drupal_get_form('_eventbrite_sboc_debug_config_form_service'));	
@@ -27,16 +26,27 @@
  
  function _eventbrite_sboc_debug_config_form_api_credentials($form, &$form_state){
  
+    $service_status = (variable_get('eventbrite_sboc_app_state', 0) == 0) ? '<span style="color: #F7110A;">Not Active</span>' : '<span style="color: #31C728;">Active</span>';
+	$form['service_notifications'] = array(
+		'#type' => 'fieldset',
+		'#title' => t('Notifications'),
+	);
+	$form['service_notifications']['service_status_notification'] = array(
+	  '#prefix' => '<p style="color: #000;"><strong>',
+	  '#markup' => t('Service Status: !service_status', array('!service_status' => $service_status)),
+	  '#suffix' => '</strong></p>',
+	);
+ 
     $form['eventbrite_api_settings'] = array(
 		'#type' => 'fieldset',
 		'#title' => t('Eventbrite API credentials'),
 	);
 	
 	$form['eventbrite_api_settings']['eventbrite_api_notice_1'] = array(
-	  '#prefix' => '<p style="color: #F00;"><strong>',
-	  '#markup' => t('Please Note: OAUTH Key and User Password fields can be used together or alternately. For security reasons their values are never displayed and will be overwritten each time their respective forms are saved. So, ensure you have those values handy each time.'),
-	  '#suffix' => '</strong></p>',
-	);
+	  '#prefix' => '<p style="color: #000; font-style: italic;">',
+	  '#markup' => t('<strong>Please Note: &nbsp;</strong><span style="text-decoration: underline;">OAUTH Key</span> and <span style="text-decoration: underline;">User Password</span> fields can be used together or alternately. For security reasons their values are never displayed and will be overwritten each time their respective forms are saved. So, ensure you have those values handy each time.'),
+	  '#suffix' => '</p>',
+	);	
 	
 	$form['eventbrite_api_settings']['eventbrite_api_key'] = array(
 		'#type' => 'textfield',
