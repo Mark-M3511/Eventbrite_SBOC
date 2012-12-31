@@ -123,7 +123,13 @@
 		'#default_value' => check_plain(_eventbrite_sboc_event_id()),
 		'#size' => 50,
 		'#maxlength' => 250,
-		'#description' => t('Enter the event id for the event you wish to retrieve information for'),
+		'#description' => t('Enter the id for the event'),
+	);
+	
+	$form['eventbrite_event_settings']['eventbrite_event_description'] = array(
+	  '#prefix' => '<p style="color: #000;">',
+	  '#markup' => _eventbrite_sboc_event_info(),
+	  '#suffix' => '</p>',
 	);
 	
 	$form['eventbrite_app_settings'] = array(

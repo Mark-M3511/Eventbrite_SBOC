@@ -304,32 +304,59 @@
    }
    return $result;
  }
+ 
+ function _eventbrite_sboc_OAuth_credentials(&$auth_key){
+    $result = FALSE;
+    
+	try{
+	  $auth_key = array(
+        'client_secret' => _eventbrite_sboc_oauth_key(),     
+	    'access_token' => NULL,
+	    'client_id' =>  _eventbrite_sboc_api_key(),
+	    'app_key' => _eventbrite_sboc_api_key(),
+	    'user_key' => _eventbrite_sboc_api_user_key(),
+      );
+      $oauth_login_result = Eventbrite::OAuthLogin($auth_key, '_eventbrite_sboc_get_oauth_token', '_eventbrite_sboc_set_oauth_token', '_eventbrite_sboc_del_oauth_token');	  
+	  $auth_key['access_token'] = _eventbrite_sboc_get_oauth_token();
+	  $auth_key['oauth_login_result'] = $oauth_login_result;
+	  $result = ($auth_key['access_token'] != NULL);
+	  if (!$result){
+	    throw new Exception('Unable to get access token for OAuth authentication');
+	  }
+	}catch(Exception $e){
+	   watchdog(EVENTBRITE_SBOC_MODULE_NAME, $e->getMessage(), array(), WATCHDOG_ERROR);
+	}
+	
+    return $result;
+ }
+ 
+ function _eventbrite_sboc_user_credentials(){
+      
+   $auth_key = array(
+     'client_secret' => _eventbrite_sboc_oauth_key(),     
+	 'client_id' =>  _eventbrite_sboc_api_key(),
+	 'app_key' => _eventbrite_sboc_api_key(),
+	 'user_key' => _eventbrite_sboc_api_user_key(),
+	 'user_email' => _eventbrite_sboc_api_user_email(),
+	 'user_pwd' => _eventbrite_sboc_api_user_password(),
+    );
+	
+    return $auth_key;
+ }
 
  function _eventbrite_sboc_get_pending_list($display_list = 0){
    $result = array();  
    $event_id = array('id' => _eventbrite_sboc_event_id());    
    $eb_client = NULL;
    
-   $auth_key = array(
-     'client_secret' => _eventbrite_sboc_oauth_key(),     
-	 'access_token' => NULL,
-	 'client_id' =>  _eventbrite_sboc_api_key(),
-	 'app_key' => _eventbrite_sboc_api_key(),
-	 'user_key' => _eventbrite_sboc_api_user_key(),
-    );
-   
-   $oauth_login_result = Eventbrite::OAuthLogin($auth_key, '_eventbrite_sboc_get_oauth_token', '_eventbrite_sboc_set_oauth_token', '_eventbrite_sboc_del_oauth_token');
-   
-   $auth_key['access_token'] = _eventbrite_sboc_get_oauth_token();
-   
-   if ($auth_key['access_token']){
-     $eb_client = new Eventbrite($auth_key); 
+   $auth_key = array();
+   if (_eventbrite_sboc_OAuth_credentials($auth_key)){      
+	  $eb_client = new Eventbrite($auth_key); 
    }else{
-	 $user_email = _eventbrite_sboc_api_user_email();
-	 $user_pwd =  _eventbrite_sboc_api_user_password();
-	 unset($auth_key['access_token']);
-	 $eb_client = new Eventbrite($auth_key, $user_email, $user_pwd);
-   }	 
+      $auth_key = _eventbrite_sboc_user_credentials();
+	  $eb_client = new Eventbrite($auth_key, $auth_key['user_email'], $auth_key['user_pwd']);
+   }
+   
    $eb_attendee_list = $eb_client->event_list_attendees($event_id);
       
    usort($eb_attendee_list->attendees, "_eventbrite_sboc_sort_attendees_by_id");
@@ -342,8 +369,9 @@
    $params = array(
      'display_list' => $display_list, 
      'attendees' => $eb_attendee_list->attendees, 
-     'oauth_login_result' => $oauth_login_result,
+     'oauth_login_result' => $auth_key['oauth_login_result'],
 	);	  
+	
    _eventbrite_sboc_debug('_eventbrite_sboc_debug_lists', $params); 
    
    $attendee_list = _eventbrite_sboc_display_pending_list($_SESSION['attendees']);
@@ -807,7 +835,7 @@
    
    $link = url('admin/config/system/eventbrite_sboc/attendee_report');
    $count = _eventbrite_sboc_get_attendees_from_db_paged_count($start_date, $end_date);
-   $caption = '<strong>'. t('Attendee count - (!count) - <a href="!link">New Report</a>', array('!count' => $count,
+   $caption = '<strong>'. t('Attendee count - (!count) - <a href="!link">Run a new report >></a>', array('!count' => $count,
    '!link' => $link)).'</strong>';
   
    $table = array('header'=>$header, 'rows'=>$data, 'attributes'=>array(), 'caption'=> $caption, 'colgroups'=>array(),);    
@@ -848,5 +876,26 @@
 	 default:
        break;	 
    }
+   return $result;
+ }
+ 
+ function _eventbrite_sboc_event_info(){
+   $result = 'No event information available at this time.';  
+   $event_id = array('id' => _eventbrite_sboc_event_id());    
+   $eb_client = NULL;
+   
+   $auth_key = array();
+   if (_eventbrite_sboc_OAuth_credentials($auth_key)){      
+	  $eb_client = new Eventbrite($auth_key); 
+   }else{
+      $auth_key = _eventbrite_sboc_user_credentials();
+	  $eb_client = new Eventbrite($auth_key, $auth_key['user_email'], $auth_key['user_pwd']);
+   }
+   
+   $eb_event_info = $eb_client->event_get($event_id); 
+   /* dpm($eb_event_info); */
+   $result = 'Title: '. $eb_event_info->event->title . '&nbsp;&nbsp;('. $eb_event_info->event->timezone . ')<br />';
+   $result .= 'Start: ' . date('F j, Y g:i a', strtotime($eb_event_info->event->start_date)) . '<br />';
+   $result .= 'End: ' . date('F j, Y g:i a', strtotime($eb_event_info->event->end_date)) . '<br />';
    return $result;
  }

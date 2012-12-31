@@ -8,7 +8,7 @@
  
    public static function getInfo() {
 		return array(
-			'name' => 'Eventbrite SBOC Functional Web Tests',
+			'name' => 'Eventbrite SBOC Main Module Tests',
 			'description' => 'Eventbrite SBOC Functional Testing - extending DrupalWebTestCase',
 			'group' => 'Eventbrite SBOC',
         );
@@ -27,7 +27,7 @@
 	 $this->assertFalse($result, $message);
 	  
 	 $message = 'Non-empty but validly formatted email address should return false';
-	 $result = _eventbrite_sboc_send_email('test@tet.com');	 
+	 $result = _eventbrite_sboc_send_email('test@test.com');	 
 	 $this->assertFalse($result, $message);
 	  
 	 $email = $this->randomName(30);
@@ -177,6 +177,31 @@
    public function testAntendeesConfirmedForm(){
      $this->drupalGet('admin/config/system/eventbrite_sboc/attendee_report');
 	 $this->assertText(t('Select Start and End Dates for report'));
+	 $edit = array('eventbrite_sboc_year_start' => 1, 'eventbrite_sboc_month_start' => 12,
+	  'eventbrite_sboc_day_start' => 31);
+	 $edit += array('eventbrite_sboc_year_end' => 1, 'eventbrite_sboc_month_end' => 12,
+	  'eventbrite_sboc_day_end' => 20);
+	 $this->drupalPost('admin/config/system/eventbrite_sboc/attendee_report', $edit, t('Run Report'));
+	 $this->assertText(t('Date sequence is incorrect.'));
+	 
+	 $this->drupalGet('admin/config/system/eventbrite_sboc/attendee_report');
+	 $this->assertText(t('Select Start and End Dates for report'));
+	 $edit = array('eventbrite_sboc_year_start' => 1, 'eventbrite_sboc_month_start' => 9,
+	  'eventbrite_sboc_day_start' => 31);
+	 $edit += array('eventbrite_sboc_year_end' => 1, 'eventbrite_sboc_month_end' => 12,
+	  'eventbrite_sboc_day_end' => 20);
+	 $this->drupalPost('admin/config/system/eventbrite_sboc/attendee_report', $edit, t('Run Report'));
+	 $this->assertText(t('The start date is invalid'));
+	 
+	 $this->drupalGet('admin/config/system/eventbrite_sboc/attendee_report');
+	 $this->assertText(t('Select Start and End Dates for report'));
+	 $edit = array('eventbrite_sboc_year_start' => 1, 'eventbrite_sboc_month_start' => 9,
+	  'eventbrite_sboc_day_start' => 1);
+	 $edit += array('eventbrite_sboc_year_end' => 1, 'eventbrite_sboc_month_end' => 11,
+	  'eventbrite_sboc_day_end' => 31);
+	 $this->drupalPost('admin/config/system/eventbrite_sboc/attendee_report', $edit, t('Run Report'));
+	 $this->assertText(t('The end date is invalid'));
+	 
    }
     
    
