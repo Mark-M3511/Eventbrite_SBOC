@@ -13,9 +13,9 @@
  * Settings form for menu callback
  */
  
- define('EVENTBRITE_SBOC_MODULE_DEBUG_SEND_LIMIT', 11);
- 
  require_once(drupal_get_path('module', 'eventbrite_sboc'). '/includes/eventbrite_sboc_helpers.inc');
+ 
+ define('EVENTBRITE_SBOC_MODULE_DEBUG_SEND_LIMIT', 11);
  
  function _eventbrite_sboc_build_config_forms(){ 
 	$output = drupal_render(drupal_get_form('_eventbrite_sboc_debug_config_form_api_credentials'));
@@ -31,9 +31,20 @@
 		'#type' => 'fieldset',
 		'#title' => t('Notifications'),
 	);
+	
 	$form['service_notifications']['service_status_notification'] = array(
 	  '#prefix' => '<p style="color: #000;"><strong>',
 	  '#markup' => t('Service Status: !service_status', array('!service_status' => $service_status)),
+	  '#suffix' => '</strong></p>',
+	);
+	
+	//$tz = new DateTimeZone(date_default_timezone(FALSE));
+	//$dt = new DateTime('now', $tz);
+	$current_time = _eventbrite_sboc_get_timestamp();		
+	$current_time_zone = date_default_timezone(FALSE);
+	$form['service_notifications']['service_status_date_time'] = array(
+	  '#prefix' => '<p style="color: #000;"><strong>',
+	  '#markup' => t('Current Time: !current_time&nbsp;|&nbsp;Time Zone: !current_time_zone', array('!current_time' => $current_time, '!current_time_zone' => $current_time_zone)),
 	  '#suffix' => '</strong></p>',
 	);
  
@@ -142,7 +153,7 @@
 		'#title' => t('Service is active'),
 		'#default_value' => variable_get('eventbrite_sboc_app_state', 0),
 		'#description' => t('Check to start service | Uncheck to shut down service'),
-	);
+	);		
 	
     return system_settings_form($form);
  }
@@ -179,7 +190,7 @@
 	for ($ctr = 1; $ctr < EVENTBRITE_SBOC_MODULE_DEBUG_SEND_LIMIT; $ctr++){	 
 	   $options[] = $ctr; 	
 	}
-    /*  '#options' => array(0 => 'No Limit', 1 => '1', 2 => '2', 3 => '3', 4 => '4', 5 => '5'),	 */
+
 	$form['eventbrite_app_debug_settings']['eventbrite_sboc_app_debug_send_limit'] = array(
 		'#type' => 'select',
 		'#title' => t('Debug mode: Number of emails to send'),
@@ -192,7 +203,6 @@
  }
  
  function _eventbrite_sboc_build_email_test_forms(){  
-   // return drupal_get_form('_eventbrite_sboc_config_form2') + drupal_get_form('_eventbrite_sboc_config_form3');
    $output = drupal_render(drupal_get_form('_eventbrite_sboc_config_form2'));
    $output .= drupal_render(drupal_get_form('_eventbrite_sboc_config_form3'));
    return $output;
@@ -416,32 +426,39 @@ function _eventbrite_sboc_config_form4($form, &$form_state){
 	return $form;
  }
  
- function _eventbrite_sboc_config_form4_submit($form, &$form_state){
-   $start_date = $form['eventbrite_sboc_date_select']['eventbrite_sboc_year_start']['#options'][$form_state['values']['eventbrite_sboc_year_start']];
-   $start_date .= '-'. str_pad($form_state['values']['eventbrite_sboc_month_start'],2, '0', STR_PAD_LEFT);
-   $start_date .= '-'. str_pad($form_state['values']['eventbrite_sboc_day_start'], 2, '0', STR_PAD_LEFT);
+ function _eventbrite_sboc_config_form4_validate($form, &$form_state){
+    $start_date = $form['eventbrite_sboc_date_select']['eventbrite_sboc_year_start']['#options'][$form_state['values']['eventbrite_sboc_year_start']];
+     $start_date .= '-'. str_pad($form_state['values']['eventbrite_sboc_month_start'],2, '0', STR_PAD_LEFT);
+     $start_date .= '-'. str_pad($form_state['values']['eventbrite_sboc_day_start'], 2, '0', STR_PAD_LEFT);
    
-   $end_date = $form['eventbrite_sboc_date_select']['eventbrite_sboc_year_end']['#options'][$form_state['values']['eventbrite_sboc_year_end']];
-   $end_date .= '-'. str_pad($form_state['values']['eventbrite_sboc_month_end'], 2, '0', STR_PAD_LEFT);
-   $end_date .= '-'. str_pad($form_state['values']['eventbrite_sboc_day_end'], 2, '0', STR_PAD_LEFT);
+    $end_date = $form['eventbrite_sboc_date_select']['eventbrite_sboc_year_end']['#options'][$form_state['values']['eventbrite_sboc_year_end']];
+    $end_date .= '-'. str_pad($form_state['values']['eventbrite_sboc_month_end'], 2, '0', STR_PAD_LEFT);
+    $end_date .= '-'. str_pad($form_state['values']['eventbrite_sboc_day_end'], 2, '0', STR_PAD_LEFT);
    
-   $good_dates = TRUE;
-   //9999-99-99
-   if (checkdate((int)substr($start_date,5,2), (int)substr($start_date,8,2), (int)substr($start_date,0,4)) == FALSE){
-     $good_dates = FALSE;
-     form_set_error('Start Date', t('The start date is invalid: %d', array('%d' => $start_date,)));
-   }
-   if (checkdate((int)substr($end_date,5,2), (int)substr($end_date,8,2), (int)substr($end_date,0,4)) == FALSE){
-     $good_dates = FALSE;
-     form_set_error('End Date', t('The end date is invalid: %d', array('%d' => $end_date,))); 
-   } 
-   if (($good_dates) && (strtotime($end_date) < strtotime($start_date))){
-      $good_dates = FALSE;
+    $good_dates = TRUE;
+    //9999-99-99
+    $good_dates = checkdate((int)substr($start_date,5,2), (int)substr($start_date,8,2), (int)substr($start_date,0,4));
+    if (!$good_dates){
+      form_set_error('Start Date', t('The start date is invalid: %d', array('%d' => $start_date,)));
+    }
+    $good_dates = (checkdate((int)substr($end_date,5,2), (int)substr($end_date,8,2), (int)substr($end_date,0,4)));
+    if (!$good_dates){
+      form_set_error('End Date', t('The end date is invalid: %d', array('%d' => $end_date,))); 
+    }     
+    if ($good_dates && (strtotime($end_date) < strtotime($start_date))){
       form_set_error('Date Sequence', t('Date sequence is incorrect. Start \'%d1\' later than End \'%d2\'', array('%d1' => $start_date,'%d2' => $end_date,))); 
-   }
-   if ($good_dates){
-	  $form_state['redirect'] = "admin/config/system/eventbrite_sboc/attendee_report/$start_date/$end_date";	 
-   }
+    }
+ }
+ 
+ function _eventbrite_sboc_config_form4_submit($form, &$form_state){   
+    $start_date = $form['eventbrite_sboc_date_select']['eventbrite_sboc_year_start']['#options'][$form_state['values']['eventbrite_sboc_year_start']];
+     $start_date .= '-'. str_pad($form_state['values']['eventbrite_sboc_month_start'],2, '0', STR_PAD_LEFT);
+     $start_date .= '-'. str_pad($form_state['values']['eventbrite_sboc_day_start'], 2, '0', STR_PAD_LEFT);
+   
+    $end_date = $form['eventbrite_sboc_date_select']['eventbrite_sboc_year_end']['#options'][$form_state['values']['eventbrite_sboc_year_end']];
+    $end_date .= '-'. str_pad($form_state['values']['eventbrite_sboc_month_end'], 2, '0', STR_PAD_LEFT);
+    $end_date .= '-'. str_pad($form_state['values']['eventbrite_sboc_day_end'], 2, '0', STR_PAD_LEFT);
+    $form_state['redirect'] = "admin/config/system/eventbrite_sboc/attendee_report/$start_date/$end_date";	
  }
 
  function _eventbrite_sboc_oauth_login($eventbrite_api_key, $eventbrite_oauth_key){

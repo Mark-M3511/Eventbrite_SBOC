@@ -4,18 +4,21 @@
  * eventbrite_sboc.module - manage sending purchased assets to SBOC registrants
  */
  
+  require_once(drupal_get_path('module', 'eventbrite_sboc'). '/includes/eventbrite_sboc_helpers.inc');
+ 
  /** defines **/
  define('EVENTBRITE_BASE_URL', 'https://www.eventbrite.com/json/');
  define('EVENTBRITE_SBOC_MAIL_TOKEN', 'eventbrite_sboc_mail_contact');
  //define('EVENTBRITE_SBOC_LIST_SORT_ORDER', 'ASC');
  define('EVENTBRITE_SBOC_LIST_SORT_ORDER', 'DESC');
- define('EVENTBRITE_SBOC_EMAIL_SEND_LIMIT', 50); 
+ define('EVENTBRITE_SBOC_EMAIL_SEND_LIMIT', 100); 
  define('EVENTBRITE_SBOC_QUESTION_ID_CATEGORY', 2968673); 
  define('EVENTBRITE_SBOC_QUESTION_ID_CHILD_LAST_NAME', 3007605);  
  define('EVENTBRITE_SBOC_QUESTION_ID_CHILD_FIRST_NAME', 3007609);
  define('EVENTBRITE_SBOC_QUESTION_ID_REGION', 2970301);	
  define('EVENTBRITE_SBOC_REGISTRATION_AMT_STD', 28);
- define('EVENTBRITE_SBOC_REGISTRATION_LOW_DATE',  date('Y-m-d',strtotime('yesterday')));
+ //define('EVENTBRITE_SBOC_REGISTRATION_LOW_DATE',  date('Y-m-d',strtotime('yesterday')));
+ define('EVENTBRITE_SBOC_REGISTRATION_LOW_DATE', _eventbrite_sboc_get_date('yesterday'));
  define('EVENTBRITE_SBOC_MAIL_KEY', 'send_manuals');
  define('EVENTBRITE_SBOC_MODULE_NAME', basename(__FILE__,'.module'));
  define('EVENTBRITE_SBOC_API_AUTH_PATH', 'admin/config/system/eventbrite_sboc/api_auth');
@@ -28,7 +31,7 @@
  * Implementation of hook_help
  */
  
- require_once(drupal_get_path('module', 'eventbrite_sboc'). '/includes/eventbrite_sboc_helpers.inc');
+/*  require_once(drupal_get_path('module', 'eventbrite_sboc'). '/includes/eventbrite_sboc_helpers.inc'); */
  
  function eventbrite_sboc_help($path, $arg) {
     $output = '';
@@ -393,7 +396,8 @@
  }
  
  function _eventbrite_sboc_debug_lists($display_list, $attendees, $oauth_login_result){
-    if ($display_list == 1 && module_exists('devel') && (variable_get('eventbrite_sboc_app_debug', 0) == 1)){
+    $devel_loaded = module_exists('devel');
+    if ($display_list == 1 && $devel_loaded && (variable_get('eventbrite_sboc_app_debug', 0) == 1)){
       if (variable_get('eventbrite_sboc_app_full_eb_list_attendees', 0) == 1) {	
 		dpm($attendees);
 	  }
@@ -403,6 +407,10 @@
         dpm($_SESSION['attendees']);
 	    dpm($_SESSION['attendees_in_db']); 
 		dpm($_SESSION['attendees_to_db']);
+	  }
+   }else{
+      if (!$devel_loaded){
+		drupal_set_message(t('Debug is enabled. Please install and enable the \'Devel\' module to veiw data being processed by the application.'), 'warning');
 	  }
    }
  }
@@ -532,11 +540,15 @@
  }
  
  function _eventbrite_sboc_insert_attendee_to_db($attendee){
+   /* $tz = new DateTimeZone(date_default_timezone(FALSE));
+   $dt = new DateTime('now', $tz);
+   $current_time = $dt->format('Y-m-d H:i:s');	 */
    $eid = db_insert('eventbrite_sboc_attendees')
      ->fields(array(
      'event_id' => $attendee->event_id,
      'attendee_id' => $attendee->id,
-     'create_date' => date('Y-m-d H:i:s'),
+     /* 'create_date' => date('Y-m-d H:i:s'), */
+	 'create_date' => _eventbrite_sboc_get_timestamp(),
 	 'order_id' => $attendee->order_id,
 	 'email_address' => $attendee->email,
 	 'last_name' => $attendee->last_name,
@@ -626,6 +638,7 @@
 	$langcode = $message['language']->language;
 	$message['subject'] = $params['subject'];		
 	$message['body'][] = $params['message_body'];
+	//$message['body'][] = check_plain($params['message_body']);
 	if (isset($params['attachment']) && !empty($params['attachment'])){
 	   $attachment = array(
 		   'filecontent' => file_get_contents($params['attachment']),	
@@ -666,7 +679,8 @@
 	   $_SESSION['attendees_to_db'][] = array(
 			'event_id' => $a->event_id,
 			'attendee_id' => $a->id,
-			'create_date' => date('Y-m-d H:i:s'),
+			/* 'create_date' => date('Y-m-d H:i:s'), */
+			'create_date' => _eventbrite_sboc_get_timestamp(),
 			'order_id' => $a->order_id,
 			'email_address' => $a->email,
 			'last_name' => $a->last_name,
@@ -894,8 +908,10 @@
    
    $eb_event_info = $eb_client->event_get($event_id); 
    /* dpm($eb_event_info); */
-   $result = 'Title: '. $eb_event_info->event->title . '&nbsp;&nbsp;('. $eb_event_info->event->timezone . ')<br />';
+   $result = '<strong><a href="'. $eb_event_info->event->url .'" target="_blank">'. $eb_event_info->event->title . '</a></strong>&nbsp;&nbsp;('. $eb_event_info->event->timezone . ')<br />';
    $result .= 'Start: ' . date('F j, Y g:i a', strtotime($eb_event_info->event->start_date)) . '<br />';
    $result .= 'End: ' . date('F j, Y g:i a', strtotime($eb_event_info->event->end_date)) . '<br />';
+   $result .= 'Capacity ' . $eb_event_info->event->capacity . '<br />';
+   $result .= 'Attendee Count ' . $eb_event_info->event->num_attendee_rows . '<br />';
    return $result;
  }

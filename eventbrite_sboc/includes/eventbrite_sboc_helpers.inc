@@ -59,4 +59,18 @@
  function _eventbrite_sboc_private_files_dir($file_uri){
    return realpath($file_uri);
  }
+ 
+ function _eventbrite_sboc_get_timestamp($offset='now'){
+   $tz = new DateTimeZone(date_default_timezone(FALSE));
+   $dt = new DateTime($offset, $tz);
+   $current_time = $dt->format('Y-m-d H:i:s');
+   return $current_time;   
+ }
+ 
+ function _eventbrite_sboc_get_date($offset='now'){
+   $tz = new DateTimeZone(date_default_timezone(FALSE));
+   $dt = new DateTime($offset, $tz);
+   $current_time = $dt->format('Y-m-d');
+   return $current_time; 
+ }
 
