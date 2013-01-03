@@ -26,6 +26,10 @@
  
  function _eventbrite_sboc_debug_config_form_api_credentials($form, &$form_state){
  
+ 
+    $api_key = check_plain(_eventbrite_sboc_api_key());
+	$api_user_key = check_plain(_eventbrite_sboc_api_user_key());
+ 
     $service_status = (variable_get('eventbrite_sboc_app_state', 0) == 0) ? '<span style="color: #F7110A;">Not Active</span>' : '<span style="color: #31C728;">Active</span>';
 	$form['service_notifications'] = array(
 		'#type' => 'fieldset',
@@ -38,31 +42,33 @@
 	  '#suffix' => '</strong></p>',
 	);
 	
-	//$tz = new DateTimeZone(date_default_timezone(FALSE));
-	//$dt = new DateTime('now', $tz);
+	/* $dt = new DateTime('now', new DateTimeZone(date_default_timezone(FALSE))); */
 	$current_time = _eventbrite_sboc_get_timestamp();		
 	$current_time_zone = date_default_timezone(FALSE);
 	$form['service_notifications']['service_status_date_time'] = array(
-	  '#prefix' => '<p style="color: #000;"><strong>',
-	  '#markup' => t('Current Time: !current_time&nbsp;|&nbsp;Time Zone: !current_time_zone', array('!current_time' => $current_time, '!current_time_zone' => $current_time_zone)),
-	  '#suffix' => '</strong></p>',
+	   '#prefix' => '<p style="color: #000;"><strong>',
+	   '#markup' => t('Current Time: !current_time&nbsp;|&nbsp;Time Zone: !current_time_zone', array('!current_time' => $current_time, '!current_time_zone' => $current_time_zone)),
+	   '#suffix' => '</strong></p>',
+	);
+	
+	$form['service_notifications']['eventbrite_api_notice_1'] = array(
+	  '#prefix' => '<p style="color: #000; font-style: italic; border-top: 1px solid #eeeff1; padding-top: 3px;">',
+	  '#markup' => t('<strong>Please Note: &nbsp;</strong><span style="text-decoration: underline;">OAUTH Key</span> and <span style="text-decoration: underline;">User Password</span> fields can be used together or alternately. For security reasons their values are never displayed and will be overwritten each time their respective forms are saved. So, ensure you have those values handy each time.'),
+	  '#suffix' => '</p>',
 	);
  
     $form['eventbrite_api_settings'] = array(
-		'#type' => 'fieldset',
-		'#title' => t('Eventbrite API credentials'),
+	   '#type' => 'fieldset',
+	   '#title' => t('Eventbrite API credentials'),
+	   '#collapsible' => TRUE,
+       '#collapsed' => (!empty($api_key) && !empty($api_user_key)),	   
 	);
-	
-	$form['eventbrite_api_settings']['eventbrite_api_notice_1'] = array(
-	  '#prefix' => '<p style="color: #000; font-style: italic;">',
-	  '#markup' => t('<strong>Please Note: &nbsp;</strong><span style="text-decoration: underline;">OAUTH Key</span> and <span style="text-decoration: underline;">User Password</span> fields can be used together or alternately. For security reasons their values are never displayed and will be overwritten each time their respective forms are saved. So, ensure you have those values handy each time.'),
-	  '#suffix' => '</p>',
-	);	
+		
 	
 	$form['eventbrite_api_settings']['eventbrite_api_key'] = array(
 		'#type' => 'textfield',
 		'#title' => t('API Key'),
-		'#default_value' => check_plain(_eventbrite_sboc_api_key()),
+		'#default_value' => $api_key,
 		'#size' => 50,
 		'#maxlength' => 250,
 		'#description' => t('Enter your Eventbrite api key which grants you access public event information'),
@@ -72,7 +78,7 @@
 	$form['eventbrite_api_settings']['eventbrite_api_user_key'] = array(
 		'#type' => 'textfield',
 		'#title' => t('API User Key'),
-		'#default_value' => check_plain(_eventbrite_sboc_api_user_key()),
+		'#default_value' => $api_user_key,
 		'#size' => 50,
 		'#maxlength' => 250,
 		'#description' => t('Enter your Eventbrite api user key which grants you access to private event information'),
@@ -94,19 +100,22 @@
  
  function _eventbrite_sboc_debug_config_form_client_credentials($form, &$form_state){
  
+    $user_email = _eventbrite_sboc_api_user_email();
+ 
     $form['eventbrite_event_user_credentials'] = array(
-		'#type' => 'fieldset',
-		'#title' => t('Eventbrite User Credentials'),
+	    '#type' => 'fieldset',
+	    '#title' => t('Eventbrite User Credentials'),
+		'#collapsible' => TRUE,
+        '#collapsed' => !empty($user_email),	     
 	);
 	
 	$form['eventbrite_event_user_credentials']['eventbrite_sboc_api_user_email'] = array(
 		'#type' => 'textfield',
 		'#title' => t('User Email'),
-		'#default_value' => _eventbrite_sboc_api_user_email(),
+		'#default_value' => $user_email,
 		'#size' => 80,
 		'#maxlength' => 250,
 		'#description' => t('Enter Eventbrite user\'s email (This is the email address associated with their Eventbrite account.)'),
-		/* '#required' => TRUE, */
 	);
 	
 	$form['eventbrite_event_user_credentials']['eventbrite_sboc_api_user_password'] = array(
@@ -115,7 +124,6 @@
 		'#size' => 50,
 		'#maxlength' => 250,
 		'#description' => t('Enter Eventbrite user\'s password (This is the password associated with their Eventbrite account.)'),
-		/* '#required' => TRUE, */
 	);	
 	
 	return system_settings_form($form); 
@@ -169,21 +177,21 @@
 		'#type' => 'checkbox',
 		'#title' => t('Debug Mode'),
 		'#default_value' => variable_get('eventbrite_sboc_app_debug', 0),
-		'#description' => t('Turn on debug mode'),
+		'#description' => t('Turn on/off debug mode'),
 	);
 	
 	$form['eventbrite_app_debug_settings']['eventbrite_sboc_app_display_debug_data_rows'] = array(
 		'#type' => 'checkbox',
 		'#title' => t('Debug mode: Display data records'),
 		'#default_value' => variable_get('eventbrite_sboc_app_display_debug_data_rows', 0),
-		'#description' => t('Debug mode: display data records creeated during interaction with EB servers. (CAUTION: potentially very slow operation)'),
+		'#description' => t('Display data records created during interaction with EB service. (CAUTION: Potentially very slow operation)'),
 	);
 	
 	$form['eventbrite_app_debug_settings']['eventbrite_sboc_app_full_eb_list_attendees'] = array(
 		'#type' => 'checkbox',
 		'#title' => t('Debug mode: Display full Eventbrite attendee list'),
 		'#default_value' => variable_get('eventbrite_sboc_app_full_eb_list_attendees', 0),
-		'#description' => t('Debug mode: display full list of attendees fetched from Eventbrite. (CAUTION: potentially very slow operation)'),
+		'#description' => t('Display full list of attendees fetched from Eventbrite. (CAUTION: Potentially very slow operation)'),
 	);
 	
 	$options = array('No Limit');
@@ -191,15 +199,30 @@
 	   $options[] = $ctr; 	
 	}
 
+    $option_days = array(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+	$form['eventbrite_app_debug_settings']['eventbrite_sboc_app_debug_pl_time_span'] = array(
+		'#type' => 'select',
+		'#title' => t('Debug mode: Time span (in days) for pending list'),
+        '#options' =>  $option_days,	   
+		'#default_value' => ((isset($_SESSION['debug_pl_time_span'])) ? array_search((int)$_SESSION['debug_pl_time_span'],  $option_days) : 0),
+		'#description' => t('Select the time span (in days) used to bulid the list of pending attendees. <strong>Please Note:</strong> This setting is session specific.'),
+	);  
+	
 	$form['eventbrite_app_debug_settings']['eventbrite_sboc_app_debug_send_limit'] = array(
 		'#type' => 'select',
 		'#title' => t('Debug mode: Number of emails to send'),
         '#options' => $options,	   
 		'#default_value' => variable_get('eventbrite_sboc_app_debug_send_limit', 1),
-		'#description' => t('Debug mode: Set this to a value other than \'No Limit\' to limit the number of emails that will be processed'),
+		'#description' => t('Select this to a value other than \'No Limit\' to limit the number of emails that will be processed'),
 	); 
 	
     return system_settings_form($form);	 
+ }
+ 
+ function _eventbrite_sboc_debug_set_pl_timespan($form, &$form_state){
+    $el = $form['eventbrite_app_debug_settings']['eventbrite_sboc_app_debug_send_limit']['#options'];
+    $_SESSION['debug_pl_time_span'] = $el[(int)$form_state['values']['eventbrite_sboc_app_debug_pl_time_span']];
+	drupal_set_message(t('Time span used to select records for \'Pending List\'= !days day(s).', array('!days' => $_SESSION['debug_pl_time_span'])));
  }
  
  function _eventbrite_sboc_build_email_test_forms(){  
@@ -319,15 +342,17 @@
 	return $form;
  }
 
- function _eventbrite_sboc_config_form3_submit($form, &$form_state){
+ function _eventbrite_sboc_config_form3_validate($form, &$form_state){
    $email_address = $form_state['values']['eventbrite_sboc_email_address'];
-   if (valid_email_address($email_address)){
-	 _eventbrite_sboc_admin_send_email($email_address);
-   }
-   else{
+   if (!valid_email_address($email_address)){
      form_set_error('email', t('The e-mail address provided is invalid.')); 
      watch_dog(WATCHDOG_ERROR, format_string('Invalid email address @email_address', array('@email_address' => $email_address)));
    }
+ }
+ 
+ function _eventbrite_sboc_config_form3_submit($form, &$form_state){
+    $email_address = $form_state['values']['eventbrite_sboc_email_address'];
+    _eventbrite_sboc_admin_send_email($email_address);
  }
 
  function _eventbrite_sboc_admin_send_email($email_address) {
@@ -350,7 +375,7 @@
    return TRUE;
  }
 
-function _eventbrite_sboc_config_form4($form, &$form_state){   
+function _eventbrite_sboc_config_form_attendee_report($form, &$form_state){   
 	
 	$form['eventbrite_sboc_date_select'] = array(
 		'#type' => 'fieldset',
@@ -426,7 +451,7 @@ function _eventbrite_sboc_config_form4($form, &$form_state){
 	return $form;
  }
  
- function _eventbrite_sboc_config_form4_validate($form, &$form_state){
+ function _eventbrite_sboc_config_form_attendee_report_validate($form, &$form_state){
     $start_date = $form['eventbrite_sboc_date_select']['eventbrite_sboc_year_start']['#options'][$form_state['values']['eventbrite_sboc_year_start']];
      $start_date .= '-'. str_pad($form_state['values']['eventbrite_sboc_month_start'],2, '0', STR_PAD_LEFT);
      $start_date .= '-'. str_pad($form_state['values']['eventbrite_sboc_day_start'], 2, '0', STR_PAD_LEFT);
@@ -450,7 +475,7 @@ function _eventbrite_sboc_config_form4($form, &$form_state){
     }
  }
  
- function _eventbrite_sboc_config_form4_submit($form, &$form_state){   
+ function _eventbrite_sboc_config_form_attendee_report_submit($form, &$form_state){   
     $start_date = $form['eventbrite_sboc_date_select']['eventbrite_sboc_year_start']['#options'][$form_state['values']['eventbrite_sboc_year_start']];
      $start_date .= '-'. str_pad($form_state['values']['eventbrite_sboc_month_start'],2, '0', STR_PAD_LEFT);
      $start_date .= '-'. str_pad($form_state['values']['eventbrite_sboc_day_start'], 2, '0', STR_PAD_LEFT);
