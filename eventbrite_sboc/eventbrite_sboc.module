@@ -191,10 +191,8 @@
  }
  
  function eventbrite_sboc_form_alter(&$form, $form_state, $form_id){
-   // drupal_set_message($form_id); 
    if ($form_id == '_eventbrite_sboc_debug_config_form'){ 
-      $el = $form['eventbrite_app_debug_settings']['eventbrite_sboc_app_debug_send_limit']['#default_value'];
-	  drupal_set_message(t('Time span used to select records for \'Pending List\'= !days day(s).', array('!days' => $el)));
+      $el = $form['eventbrite_app_debug_settings']['eventbrite_sboc_app_debug_pl_time_span']['#default_value'];
       $form['#submit'][] = '_eventbrite_sboc_debug_set_pl_timespan';
    } 	
  }
@@ -414,7 +412,6 @@
       if (variable_get('eventbrite_sboc_app_full_eb_list_attendees', 0) == 1) {	
 		dpm($attendees);
 	  }
-	  // Debug only
 	  if (variable_get('eventbrite_sboc_app_display_debug_data_rows', 0) == 1){
 	    dpm($oauth_login_result);
         dpm($_SESSION['attendees']);
@@ -436,7 +433,7 @@
    $result = ($create_date >= $low_date); 
    $result = ($result && !$attendee_in_db);
    $result = ($result && ($attendee->attendee->order_type == EVENTBRITE_SBOC_ORDER_STATUS));
-	
+ 
    return $result;
  }
 
@@ -566,14 +563,10 @@
  }
  
  function _eventbrite_sboc_insert_attendee_to_db($attendee){
-   /* $tz = new DateTimeZone(date_default_timezone(FALSE));
-   $dt = new DateTime('now', $tz);
-   $current_time = $dt->format('Y-m-d H:i:s');	 */
    $eid = db_insert('eventbrite_sboc_attendees')
      ->fields(array(
      'event_id' => $attendee->event_id,
      'attendee_id' => $attendee->id,
-     /* 'create_date' => date('Y-m-d H:i:s'), */
 	 'create_date' => _eventbrite_sboc_get_timestamp(),
 	 'order_id' => $attendee->order_id,
 	 'email_address' => $attendee->email,
@@ -602,6 +595,7 @@
 
  function _eventbrite_sboc_search_saved_attendees($attendees, $search_id){
     $result = FALSE;
+
     foreach($attendees as $a){
 	  if($a->attendee_id == $search_id){
 	     $result = TRUE;
@@ -684,7 +678,7 @@
    $ctr = 0;
    $debug_limit = variable_get('eventbrite_sboc_app_debug_send_limit', 1);
    $debug_mode = (variable_get('eventbrite_sboc_app_debug', 0) == 1);
-   $_SESSION['attendees_to_db'] = array();;
+   $_SESSION['attendees_to_db'] = array();
    foreach($attendees as $a){  
      $replacements = array(
 	 '@first_name' => $a->first_name, 
@@ -700,13 +694,13 @@
      $success = _eventbrite_sboc_send_email($to, $message_body, $a->attachment, drupal_basename($a->attachment),
 	 $a->attachment_mime_type);
      if ($success){
+	   $timestamp = _eventbrite_sboc_get_timestamp();
 	   $a->email_sent = 1;
-	   $a->email_send_date = date('Y-m-d H:i:s');
+	   $a->email_send_date = $timestamp;
 	   $_SESSION['attendees_to_db'][] = array(
 			'event_id' => $a->event_id,
 			'attendee_id' => $a->id,
-			/* 'create_date' => date('Y-m-d H:i:s'), */
-			'create_date' => _eventbrite_sboc_get_timestamp(),
+			'create_date' => $timestamp,
 			'order_id' => $a->order_id,
 			'email_address' => $a->email,
 			'last_name' => $a->last_name,
@@ -941,7 +935,7 @@
    $result = '<strong><a href="'. $eb_event_info->event->url .'" target="_blank">'. $eb_event_info->event->title . '</a></strong>&nbsp;&nbsp;('. $eb_event_info->event->timezone . ')<br />';
    $result .= 'Start: ' . date('F j, Y g:i a', strtotime($eb_event_info->event->start_date)) . '<br />';
    $result .= 'End: ' . date('F j, Y g:i a', strtotime($eb_event_info->event->end_date)) . '<br />';
-   $result .= 'Capacity ' . $eb_event_info->event->capacity . '<br />';
-   $result .= 'Attendee Count ' . $eb_event_info->event->num_attendee_rows . '<br />';
+   $result .= 'Capacity: <strong>' . $eb_event_info->event->capacity . '</strong><br />';
+   $result .= 'Attendee Count: <strong>' . $eb_event_info->event->num_attendee_rows . '</strong><br />';
    return $result;
  }

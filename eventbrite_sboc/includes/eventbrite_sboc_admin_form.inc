@@ -200,11 +200,12 @@
 	}
 
     $option_days = array(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+	$num_days = array_search((int)$_SESSION['debug_pl_time_span'], $option_days);
 	$form['eventbrite_app_debug_settings']['eventbrite_sboc_app_debug_pl_time_span'] = array(
 		'#type' => 'select',
 		'#title' => t('Debug mode: Time span (in days) for pending list'),
         '#options' =>  $option_days,	   
-		'#default_value' => ((isset($_SESSION['debug_pl_time_span'])) ? array_search((int)$_SESSION['debug_pl_time_span'],  $option_days) : 0),
+		'#default_value' => ((isset($_SESSION['debug_pl_time_span'])) ? $num_days : 0),
 		'#description' => t('Select the time span (in days) used to bulid the list of pending attendees. <strong>Please Note:</strong> This setting is session specific.'),
 	);  
 	
@@ -220,15 +221,16 @@
  }
  
  function _eventbrite_sboc_debug_set_pl_timespan($form, &$form_state){
-    $el = $form['eventbrite_app_debug_settings']['eventbrite_sboc_app_debug_send_limit']['#options'];
-    $_SESSION['debug_pl_time_span'] = $el[(int)$form_state['values']['eventbrite_sboc_app_debug_pl_time_span']];
-	drupal_set_message(t('Time span used to select records for \'Pending List\'= !days day(s).', array('!days' => $_SESSION['debug_pl_time_span'])));
+    $el = $form['eventbrite_app_debug_settings']['eventbrite_sboc_app_debug_pl_time_span']['#options'];
+    $num_days = $el[(int)$form_state['values']['eventbrite_sboc_app_debug_pl_time_span']];
+	$_SESSION['debug_pl_time_span'] = $num_days;
+	drupal_set_message(t('Time span used to select records for \'Pending List\'= !days day(s).', array('!days' => $num_days)));
  }
  
  function _eventbrite_sboc_build_email_test_forms(){  
-   $output = drupal_render(drupal_get_form('_eventbrite_sboc_config_form2'));
-   $output .= drupal_render(drupal_get_form('_eventbrite_sboc_config_form3'));
-   return $output;
+    $output = drupal_render(drupal_get_form('_eventbrite_sboc_config_form2'));
+    $output .= drupal_render(drupal_get_form('_eventbrite_sboc_config_form3'));
+    return $output;
  }
 
  function _eventbrite_sboc_config_form2($form, &$form_state) {
@@ -236,6 +238,8 @@
 	$form['eventbrite_sboc_file_names'] = array(
 		'#type' => 'fieldset',
 		'#title' => t('Files to be emailed'),
+		'#collapsible' => TRUE,
+		'#collapsed'   => TRUE,
 	);
 	
 	$form['eventbrite_sboc_file_names']['eventbrite_sboc_filename_1'] = array(
@@ -369,10 +373,10 @@
    $eventbrite_api_user_key = $form_state['values']['eventbrite_api_user_key'];
     
    if (empty($eventbrite_app_key) || empty($eventbrite_api_user_key)) {
-	 return FALSE;
-   }
-  
-   return TRUE;
+	 //return FALSE;
+	 form_set_error('API Credentials', t('Eventbrite API Key and API Usere Keys are required.'));
+   }  
+   //return TRUE;
  }
 
 function _eventbrite_sboc_config_form_attendee_report($form, &$form_state){   
