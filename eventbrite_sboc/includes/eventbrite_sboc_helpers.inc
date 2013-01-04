@@ -61,16 +61,34 @@
  }
  
  function _eventbrite_sboc_get_timestamp($offset='now'){
-   $tz = new DateTimeZone(date_default_timezone(FALSE));
+   $tz = new DateTimeZone(str_replace(' ', '_', date_default_timezone(FALSE)));
    $dt = new DateTime($offset, $tz);
-   $current_time = $dt->format('Y-m-d H:i:s');
-   return $current_time;   
+   return $dt->format('Y-m-d H:i:s');
  }
  
  function _eventbrite_sboc_get_date($offset='now'){
-   $tz = new DateTimeZone(date_default_timezone(FALSE));
+   $tz = new DateTimeZone(str_replace(' ', '_', date_default_timezone(FALSE)));
    $dt = new DateTime($offset, $tz);
-   $current_time = $dt->format('Y-m-d');
+   return $dt->format('Y-m-d'); 
+ }
+ 
+ function _eventbrite_sboc_get_low_date(){
+   $days = -((int)$_SESSION['debug_pl_time_span']);
+   $low_date = (variable_get('eventbrite_sboc_app_debug', 0) == 0) ? EVENTBRITE_SBOC_REGISTRATION_LOW_DATE : _eventbrite_sboc_get_date("$days day");   
+   return $low_date;
+ } 
+ 
+ function _eventbrite_sboc_get_date_in_tz($timestamp, $tz_origin, $tz_target=''){
+   $current_time = $timestamp;
+   try{
+     $tz_target = (!empty($tz_target)) ? str_replace(' ', '_', $tz_target) : str_replace(' ', '_', date_default_timezone(FALSE));
+     $tz = new DateTimeZone(str_replace(' ', '_', $tz_origin));
+     $dt = new DateTime($timestamp, $tz);
+     $dt->setTimezone(new DateTimeZone($tz_target));
+	 $current_time = $dt->format('Y-m-d H:i:s');
+   }catch(Exception $e){
+      watchdog(EVENTBRITE_SBOC_MODULE_NAME, t($e->getMessage()),array(), WATCHDOG_ERROR);
+   }
    return $current_time; 
  }
 

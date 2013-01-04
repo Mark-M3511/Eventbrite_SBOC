@@ -25,6 +25,8 @@
  define('EVENTBRITE_SBOC_ORDER_STATUS', 'PayPal Completed');
  define('EVENTBRITE_SBOC_PAGE_LIMIT', 10);
  define('EVENTBRITE_SBOC_DATE_SUB_PART', 10);
+ define('EVENTBRITE_SBOC_DATE_PACIFIC_TZ', 'America/Los Angeles');
+ define('EVENTBRITE_SBOC_DATE_EASTERN_TZ', 'America/Toronto');
 
  /**
  * Implementation of hook_help
@@ -319,6 +321,23 @@
    return $result;
  }
  
+ function _eventbrite_sboc_sort_attendees_by_create_date($a, $b){
+   $_a->created = _eventbrite_sboc_get_date_in_tz($a->attendee->created, EVENTBRITE_SBOC_DATE_PACIFIC_TZ);
+   $_b->created = _eventbrite_sboc_get_date_in_tz($b->attendee->created, EVENTBRITE_SBOC_DATE_PACIFIC_TZ);
+   $result = -1;
+   if ($_a->created == $_b->created){
+      $result = 0;
+   }
+   else {
+      if (EVENTBRITE_SBOC_LIST_SORT_ORDER == 'ASC'){
+        $result = ($_a->created > $_b->created) ? 1 : -1;
+	  }else{
+	    $result = ($_a->created < $_b->created) ? 1 : -1;
+	  }
+   }
+   return $result;
+ }
+ 
  function _eventbrite_sboc_OAuth_credentials(&$auth_key){
     $result = FALSE;
     
@@ -338,7 +357,7 @@
 	    throw new Exception('Unable to get access token for OAuth authentication');
 	  }
 	}catch(Exception $e){
-	   watchdog(EVENTBRITE_SBOC_MODULE_NAME, $e->getMessage(), array(), WATCHDOG_ERROR);
+	   watchdog(EVENTBRITE_SBOC_MODULE_NAME, t($e->getMessage()), array(), WATCHDOG_ERROR);
 	}
 	
     return $result;
@@ -372,8 +391,8 @@
    }
    
    $eb_attendee_list = $eb_client->event_list_attendees($event_id);
-      
-   usort($eb_attendee_list->attendees, "_eventbrite_sboc_sort_attendees_by_id");
+   // usort($eb_attendee_list->attendees, "_eventbrite_sboc_sort_attendees_by_id");
+   usort($eb_attendee_list->attendees, '_eventbrite_sboc_sort_attendees_by_create_date');
    _eventbrite_sboc_cache_attendee_list($eb_attendee_list->attendees);  
    
    if (arg(5) != NULL){
@@ -426,10 +445,13 @@
  }
  
  function _eventbrite_sboc_add_to_pending_list($attendee){
+   /* Date and time record created on EB */
    $create_date = substr($attendee->attendee->created, 0, EVENTBRITE_SBOC_DATE_SUB_PART);
+   /* Flag to indicate record does or does not exist in SBOC database */
    $attendee_in_db = _eventbrite_sboc_search_saved_attendees($_SESSION['attendees_in_db'], $attendee->attendee->id);
-   $days = -((int)$_SESSION['debug_pl_time_span']);
-   $low_date = (variable_get('eventbrite_sboc_app_debug', 0) == 0) ? EVENTBRITE_SBOC_REGISTRATION_LOW_DATE : _eventbrite_sboc_get_date("$days day");
+   /* Low date calculation */
+   $low_date = _eventbrite_sboc_get_low_date();
+   /* Check conditions for inclusion */
    $result = ($create_date >= $low_date); 
    $result = ($result && !$attendee_in_db);
    $result = ($result && ($attendee->attendee->order_type == EVENTBRITE_SBOC_ORDER_STATUS));
@@ -439,9 +461,15 @@
 
  function _eventbrite_sboc_cache_attendee_list($attendees){
     $ctr = 0;
+	$pending_ctr = 0;
 	$_SESSION['attendees'] = array();
 	$_SESSION['attendees_in_db'] = _eventbrite_sboc_get_attendees_from_db();
+	$low_date = _eventbrite_sboc_get_low_date();
 	foreach($attendees as $a){
+	  //if ($ctr >= EVENTBRITE_SBOC_EMAIL_SEND_LIMIT || $low_date > substr($a->attendee->created, 0, 10)){	      
+	  if ($low_date > substr($a->attendee->created, 0, 10)){	      
+		 break;		
+	  } 
 	  if (_eventbrite_sboc_add_to_pending_list($a)){ 	 
 	    $newAttendee = new stdClass;
 	    $newAttendee->last_name = $a->attendee->last_name;
@@ -450,7 +478,8 @@
 	    $newAttendee->id = $a->attendee->id;
 	    $newAttendee->event_id = $a->attendee->event_id;
 	    $newAttendee->order_id = $a->attendee->order_id;
-		$newAttendee->created = substr($a->attendee->created, 0, EVENTBRITE_SBOC_DATE_SUB_PART);		
+		//$newAttendee->created = substr($a->attendee->created, 0, EVENTBRITE_SBOC_DATE_SUB_PART);	
+		$newAttendee->created = _eventbrite_sboc_get_date_in_tz($a->attendee->created, EVENTBRITE_SBOC_DATE_PACIFIC_TZ);	
 	    $newAttendee->amount_paid = $a->attendee->amount_paid;
 	    $newAttendee->registration_type = ($a->attendee->amount_paid > EVENTBRITE_SBOC_REGISTRATION_AMT_STD ? 'Premium' : 'Standard');
 	    $newAttendee->ans_id = _eventbrite_sboc_answer_id($a->attendee->answers, EVENTBRITE_SBOC_QUESTION_ID_CATEGORY);
@@ -468,21 +497,20 @@
 	    $newAttendee->child_last_name = $a->attendee->answers[$newAttendee->ans_id]->answer->answer_text;
 		$newAttendee->ans_id = _eventbrite_sboc_answer_id($a->attendee->answers, EVENTBRITE_SBOC_QUESTION_ID_REGION);
 	    $newAttendee->region = $a->attendee->answers[$newAttendee->ans_id]->answer->answer_text;
-	    $_SESSION['attendees'][] = $newAttendee;
-		$ctr++;
+	    $_SESSION['attendees'][] = $newAttendee;	
+        $pending_ctr++;		
 	  }
-	  /** Do we want to get out of here once the create date is less than the low date value? **/
-      if ($ctr >= EVENTBRITE_SBOC_EMAIL_SEND_LIMIT /* || substr($a->attendee->created, 0, 10) < EVENTBRITE_SBOC_REGISTRATION_LOW_DATE */){
-		  break;		
-	  }
-	  //$ctr++;
+	  $ctr++;	  
 	}	
-	return $ctr;
+	watchdog(EVENTBRITE_SBOC_MODULE_NAME, t('Total rows processed: !ctr'), array('!ctr' => $ctr), WATCHDOG_NOTICE);
+	watchdog(EVENTBRITE_SBOC_MODULE_NAME, t('Total rows added to \'Pending List\': !pending_ctr'), array('!pending_ctr' => $pending_ctr), WATCHDOG_NOTICE);
+	watchdog(EVENTBRITE_SBOC_MODULE_NAME, t('Low date: !low_date'), array('!low_date' => $low_date), WATCHDOG_NOTICE);
+	
+	return $pending_ctr;
  }
  
  function _eventbrite_sboc_get_attendees_from_db(){  
-   $days = -((int)$_SESSION['debug_pl_time_span']);
-   $low_date = (variable_get('eventbrite_sboc_app_debug', 0) == 0) ? EVENTBRITE_SBOC_REGISTRATION_LOW_DATE : _eventbrite_sboc_get_date("$days day");
+   $low_date = _eventbrite_sboc_get_low_date();
    
    $result = db_select('eventbrite_sboc_attendees', 'e')  
    ->where('(e.event_id = \''. _eventbrite_sboc_event_id(). '\') AND (DATE_FORMAT(e.create_date,\'%Y-%m-%d\') >= \''. $low_date. '\')' )
@@ -595,7 +623,6 @@
 
  function _eventbrite_sboc_search_saved_attendees($attendees, $search_id){
     $result = FALSE;
-
     foreach($attendees as $a){
 	  if($a->attendee_id == $search_id){
 	     $result = TRUE;
@@ -649,7 +676,7 @@
 	 $result = TRUE;
 	 watchdog(EVENTBRITE_SBOC_MODULE_NAME, t('Email successfully sent to: %to'), array('%to' => $to), WATCHDOG_INFO); 	 
    }catch(Exception $e){
-      watchdog(EVENTBRITE_SBOC_MODULE_NAME, $e->getMessage(), array(), WATCHDOG_ERROR);
+      watchdog(EVENTBRITE_SBOC_MODULE_NAME, t($e->getMessage()), array(), WATCHDOG_ERROR);
    }
    return $result;
  }
@@ -794,7 +821,7 @@
 	       }
          }
        }catch(Exception $e){
-          watchdog(EVENTBRITE_SBOC_MODULE_NAME, $e->getMessage(), array(), WATCHDOG_ERROR);
+          watchdog(EVENTBRITE_SBOC_MODULE_NAME, t($e->getMessage()), array(), WATCHDOG_ERROR);
        }
 	}
     
@@ -918,7 +945,7 @@
  }
  
  function _eventbrite_sboc_event_info(){
-   $result = 'No event information available at this time.';  
+   $result = t('No event information available at this time.');  
    $event_id = array('id' => _eventbrite_sboc_event_id());    
    $eb_client = NULL;
    
@@ -931,8 +958,7 @@
    }
    
    $eb_event_info = $eb_client->event_get($event_id); 
-   /* dpm($eb_event_info); */
-   $result = '<strong><a href="'. $eb_event_info->event->url .'" target="_blank">'. $eb_event_info->event->title . '</a></strong>&nbsp;&nbsp;('. $eb_event_info->event->timezone . ')<br />';
+   $result = t('<strong><a href="@url" target="_blank">@title</a></strong>&nbsp;&nbsp;(@tz)<br />', array('@url'=>$eb_event_info->event->url, '@title'=>$eb_event_info->event->title,'@tz'=>$eb_event_info->event->timezone,));
    $result .= 'Start: ' . date('F j, Y g:i a', strtotime($eb_event_info->event->start_date)) . '<br />';
    $result .= 'End: ' . date('F j, Y g:i a', strtotime($eb_event_info->event->end_date)) . '<br />';
    $result .= 'Capacity: <strong>' . $eb_event_info->event->capacity . '</strong><br />';
