@@ -61,28 +61,32 @@
  }
  
  function _eventbrite_sboc_get_timestamp($offset='now'){
-   $tz = new DateTimeZone(str_replace(' ', '_', date_default_timezone(FALSE)));
+   $tz = new DateTimeZone(_eventbrite_sboc_get_php_safe_tz(date_default_timezone(FALSE)));
    $dt = new DateTime($offset, $tz);
    return $dt->format('Y-m-d H:i:s');
  }
  
  function _eventbrite_sboc_get_date($offset='now'){
-   $tz = new DateTimeZone(str_replace(' ', '_', date_default_timezone(FALSE)));
+   $tz = new DateTimeZone(_eventbrite_sboc_get_php_safe_tz(date_default_timezone(FALSE)));
    $dt = new DateTime($offset, $tz);
    return $dt->format('Y-m-d'); 
  }
  
  function _eventbrite_sboc_get_low_date(){
-   $days = -((int)$_SESSION['debug_pl_time_span']);
-   $low_date = (variable_get('eventbrite_sboc_app_debug', 0) == 0) ? EVENTBRITE_SBOC_REGISTRATION_LOW_DATE : _eventbrite_sboc_get_date("$days day");   
+   if (!isset($_SESSION['pending_list_time_span'])) {
+      $_SESSION['pending_list_time_span'] = 1;
+   }
+   $days = -((int)$_SESSION['pending_list_time_span']);
+   /* $low_date = (variable_get('eventbrite_sboc_app_debug', 0) == 0) ? EVENTBRITE_SBOC_REGISTRATION_LOW_DATE : _eventbrite_sboc_get_date("$days day");  */       
+   $low_date = _eventbrite_sboc_get_date("$days day"); 
    return $low_date;
  } 
  
  function _eventbrite_sboc_get_date_in_tz($timestamp, $tz_origin, $tz_target=''){
    $current_time = $timestamp;
    try{
-     $tz_target = (!empty($tz_target)) ? str_replace(' ', '_', $tz_target) : str_replace(' ', '_', date_default_timezone(FALSE));
-     $tz = new DateTimeZone(str_replace(' ', '_', $tz_origin));
+     $tz_target = (!empty($tz_target)) ? _eventbrite_sboc_get_php_safe_tz($tz_target) : _eventbrite_sboc_get_php_safe_tz(date_default_timezone(FALSE));
+     $tz = new DateTimeZone(_eventbrite_sboc_get_php_safe_tz($tz_origin));
      $dt = new DateTime($timestamp, $tz);
      $dt->setTimezone(new DateTimeZone($tz_target));
 	 $current_time = $dt->format('Y-m-d H:i:s');
@@ -90,5 +94,28 @@
       watchdog(EVENTBRITE_SBOC_MODULE_NAME, t($e->getMessage()),array(), WATCHDOG_ERROR);
    }
    return $current_time; 
+ }
+ 
+ function _eventbrite_sboc_get_timezone_list(){
+   $tz_list = timezone_identifiers_list();
+   $result = array();
+   $dt = new DateTime('now');
+   foreach($tz_list as $tz){
+	 $dt->setTimezone(new DateTimeZone(_eventbrite_sboc_get_php_safe_tz($tz)));
+     $result[] = str_replace('_', ' ', $tz). "  [".$dt->format(DateTime::RFC1123). "]"; 
+   }
+   return $result;
+ }
+ 
+ function _eventbrite_sboc_get_timezone_by_index($index){
+   $tz_list = timezone_identifiers_list();
+   if ($index < 0 ||$index > count($tz_list)){
+     $index = 0;
+   }
+   return _eventbrite_sboc_get_php_safe_tz($tz_list[$index]);
+ }
+ 
+ function _eventbrite_sboc_get_php_safe_tz($timezone){
+    return str_replace(' ', '_', $timezone);
  }
 

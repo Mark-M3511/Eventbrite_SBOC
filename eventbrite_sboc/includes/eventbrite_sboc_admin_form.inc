@@ -42,12 +42,12 @@
 	  '#suffix' => '</strong></p>',
 	);
 	
-	/* $dt = new DateTime('now', new DateTimeZone(date_default_timezone(FALSE))); */
-	$current_time = _eventbrite_sboc_get_timestamp();		
+	/* $dt = new DateTime('now', new DateTimeZone(_eventbrite_sboc_get_php_safe_tz(date_default_timezone(FALSE)))); */
+	$current_time = date(DateTime::RFC1123, strtotime(_eventbrite_sboc_get_timestamp()));		
 	$current_time_zone = date_default_timezone(FALSE);
 	$form['service_notifications']['service_status_date_time'] = array(
 	   '#prefix' => '<p style="color: #000;"><strong>',
-	   '#markup' => t('Current Time: !current_time&nbsp;|&nbsp;Time Zone: !current_time_zone', array('!current_time' => $current_time, '!current_time_zone' => $current_time_zone)),
+	   '#markup' => t('Site Time: !current_time&nbsp;|&nbsp;Time Zone: !current_time_zone', array('!current_time' => $current_time, '!current_time_zone' => $current_time_zone)),
 	   '#suffix' => '</strong></p>',
 	);
 	
@@ -145,6 +145,14 @@
 		'#description' => t('Enter the id for the event'),
 	);
 	
+	$form['eventbrite_event_settings']['eventbrite_event_registrations_tz'] = array(
+		'#type' => 'select',
+		'#title' => t('Attendee Registration Time Zone'),
+		'#default_value' => variable_get('eventbrite_event_registrations_tz', 0),
+		'#options' => _eventbrite_sboc_get_timezone_list(),
+		'#description' => t('Identify the time zone used to timestamp attendee records'),
+	);
+	
 	$form['eventbrite_event_settings']['eventbrite_event_description'] = array(
 	  '#prefix' => '<p style="color: #000;">',
 	  '#markup' => _eventbrite_sboc_event_info(),
@@ -200,12 +208,12 @@
 	}
 
     $option_days = array(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
-	$num_days = array_search((int)$_SESSION['debug_pl_time_span'], $option_days);
+	$num_days = array_search((int)$_SESSION['pending_list_time_span'], $option_days);
 	$form['eventbrite_app_debug_settings']['eventbrite_sboc_app_debug_pl_time_span'] = array(
 		'#type' => 'select',
 		'#title' => t('Debug mode: Time span (in days) for pending list'),
         '#options' =>  $option_days,	   
-		'#default_value' => ((isset($_SESSION['debug_pl_time_span'])) ? $num_days : 0),
+		'#default_value' => ((isset($_SESSION['pending_list_time_span'])) ? $num_days : 0),
 		'#description' => t('Select the time span (in days) used to bulid the list of pending attendees. <strong>Please Note:</strong> This setting is session specific.'),
 	);  
 	
@@ -223,7 +231,7 @@
  function _eventbrite_sboc_debug_set_pl_timespan($form, &$form_state){
     $el = $form['eventbrite_app_debug_settings']['eventbrite_sboc_app_debug_pl_time_span']['#options'];
     $num_days = $el[(int)$form_state['values']['eventbrite_sboc_app_debug_pl_time_span']];
-	$_SESSION['debug_pl_time_span'] = $num_days;
+	$_SESSION['pending_list_time_span'] = $num_days;
 	drupal_set_message(t('Time span used to select records for \'Pending List\'= !days day(s).', array('!days' => $num_days)));
  }
  
