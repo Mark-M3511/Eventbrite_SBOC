@@ -76,8 +76,7 @@
    if (!isset($_SESSION['pending_list_time_span'])) {
       $_SESSION['pending_list_time_span'] = 1;
    }
-   $days = -((int)$_SESSION['pending_list_time_span']);
-   /* $low_date = (variable_get('eventbrite_sboc_app_debug', 0) == 0) ? EVENTBRITE_SBOC_REGISTRATION_LOW_DATE : _eventbrite_sboc_get_date("$days day");  */       
+   $days = -((int)$_SESSION['pending_list_time_span']);     
    $low_date = _eventbrite_sboc_get_date("$days day"); 
    return $low_date;
  } 
@@ -86,8 +85,8 @@
    $current_time = $timestamp;
    try{
      $tz_target = (!empty($tz_target)) ? _eventbrite_sboc_get_php_safe_tz($tz_target) : _eventbrite_sboc_get_php_safe_tz(date_default_timezone(FALSE));
-     $tz = new DateTimeZone(_eventbrite_sboc_get_php_safe_tz($tz_origin));
-     $dt = new DateTime($timestamp, $tz);
+	 $tz_origin = _eventbrite_sboc_get_php_safe_tz($tz_origin);
+     $dt = new DateTime($timestamp, new DateTimeZone($tz_origin));
      $dt->setTimezone(new DateTimeZone($tz_target));
 	 $current_time = $dt->format('Y-m-d H:i:s');
    }catch(Exception $e){
@@ -102,7 +101,7 @@
    $dt = new DateTime('now');
    foreach($tz_list as $tz){
 	 $dt->setTimezone(new DateTimeZone(_eventbrite_sboc_get_php_safe_tz($tz)));
-     $result[] = str_replace('_', ' ', $tz). "  [".$dt->format(DateTime::RFC1123). "]"; 
+     $result[] = str_replace('_', ' ', $tz). " [".$dt->format(DateTime::RFC1123). "]"; 
    }
    return $result;
  }

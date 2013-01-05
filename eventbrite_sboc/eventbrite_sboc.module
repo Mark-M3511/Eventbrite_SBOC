@@ -314,13 +314,15 @@
  }
   
  
- function _eventbrite_sboc_sort_attendees_by_id($a, $b){
+ function _eventbrite_sboc_sort_attendees_by_id($a, $b){   
+
    $result = -1;
+   $sort = variable_get('eventbrite_sboc_app_data_sort_order', EVENTBRITE_SBOC_LIST_SORT_ORDER);
    if ($a->attendee->id == $b->attendee->id){
       $result = 0;
    }
    else {
-      if (EVENTBRITE_SBOC_LIST_SORT_ORDER == 'ASC'){
+      if ($sort == 'ASC'){
         $result = ($a->attendee->id > $b->attendee->id) ? 1 : -1;
 	  }else{
 	    $result = ($a->attendee->id < $b->attendee->id) ? 1 : -1;
@@ -333,12 +335,13 @@
    $tz_name = _eventbrite_sboc_get_timezone_by_index(variable_get('eventbrite_event_registrations_tz', 0));
    $_a->created = _eventbrite_sboc_get_date_in_tz($a->attendee->created, $tz_name);
    $_b->created = _eventbrite_sboc_get_date_in_tz($b->attendee->created, $tz_name);
+   $sort = variable_get('eventbrite_sboc_app_data_sort_order', EVENTBRITE_SBOC_LIST_SORT_ORDER);
    $result = -1;
    if ($_a->created == $_b->created){
       $result = 0;
    }
    else {
-      if (EVENTBRITE_SBOC_LIST_SORT_ORDER == 'ASC'){
+      if ($sort == 'ASC'){
         $result = ($_a->created > $_b->created) ? 1 : -1;
 	  }else{
 	    $result = ($_a->created < $_b->created) ? 1 : -1;
@@ -393,15 +396,27 @@
 	  '#title' => t('Pending List Settings'),
 	);
  
-    $option_days = array(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+    $option_days = drupal_map_assoc(array(1, 2, 3, 4, 5, 6, 7, 8, 9, 10));
+	if (!isset($_SESSION['pending_list_time_span'])) {
+	   $_SESSION['pending_list_time_span'] = 1;
+	}
 	$num_days = array_search((int)$_SESSION['pending_list_time_span'], $option_days);
 	$form['eventbrite_app_pending_list']['eventbrite_sboc_app_pl_time_span'] = array(
 	   '#type' => 'select',
 	   '#title' => t('Time span (in days) for pending list'),
        '#options' =>  $option_days,	   
-	   '#default_value' => ((isset($_SESSION['pending_list_time_span'])) ? $num_days : 0),
+	   '#default_value' => ((isset($_SESSION['pending_list_time_span'])) ? $num_days : 1),
 	   '#description' => t('Select the time span (in days) used to bulid the list of pending attendees. <strong>Please Note:</strong> This setting is session specific.'),
 	);  
+	
+	$sort_order = drupal_map_assoc(array('ASC', 'DESC'));
+	$form['eventbrite_app_pending_list']['eventbrite_sboc_app_data_sort_order'] = array(
+	   '#type' => 'select',
+	   '#title' => t('Date sort order'),
+       '#options' =>  $sort_order,	   
+	   '#default_value' => variable_get('eventbrite_sboc_app_data_sort_order', EVENTBRITE_SBOC_LIST_SORT_ORDER),
+	   '#description' => t('Select the sort order (by date) for attendee recordsd: 1: ASCending 2: DESCending'),
+	); 
 	
 	$form['eventbrite_app_pending_list']['eventbrite_sboc_submit'] = array(
 	   '#type' => 'submit',
@@ -412,10 +427,10 @@
  }
  
  function _eventbrite_sboc_generate_pending_list($form, &$form_state){
-    $el = $form['eventbrite_app_pending_list']['eventbrite_sboc_app_pl_time_span']['#options'];
-    $num_days = $el[(int)$form_state['values']['eventbrite_sboc_app_pl_time_span']];
+	$num_days = (int)$form_state['values']['eventbrite_sboc_app_pl_time_span'];
 	$_SESSION['pending_list_time_span'] = $num_days;
-	drupal_set_message(t('Time span used to select records for \'Pending List\'= !days day(s).', array('!days' => $num_days)));
+	drupal_set_message(t('Time span used to select records for \'Pending List\'= !days day(s). Low date: !low_date', array('!days' => $num_days, '!low_date' => _eventbrite_sboc_get_date("-$num_days day"))));
+	variable_set('eventbrite_sboc_app_data_sort_order', $form_state['values']['eventbrite_sboc_app_data_sort_order']);
 	$form_state['redirect'] = 'admin/config/system/eventbrite_sboc/api_pending_list/1';
  }
 
@@ -489,7 +504,8 @@
  
  function _eventbrite_sboc_add_to_pending_list($attendee){
    /* Date and time record created on EB */
-   $create_date = substr($attendee->attendee->created, 0, EVENTBRITE_SBOC_DATE_SUB_PART);
+   $tz_name = _eventbrite_sboc_get_timezone_by_index(variable_get('eventbrite_event_registrations_tz', 0));
+   $create_date = substr(_eventbrite_sboc_get_date_in_tz($attendee->attendee->created, $tz_name), 0, EVENTBRITE_SBOC_DATE_SUB_PART);
    /* Flag to indicate record does or does not exist in SBOC database */
    $attendee_in_db = _eventbrite_sboc_search_saved_attendees($_SESSION['attendees_in_db'], $attendee->attendee->id);
    /* Low date calculation */
@@ -508,9 +524,10 @@
 	$_SESSION['attendees'] = array();
 	$_SESSION['attendees_in_db'] = _eventbrite_sboc_get_attendees_from_db();
 	$low_date = _eventbrite_sboc_get_low_date();
-	foreach($attendees as $a){
-	  //if ($ctr >= EVENTBRITE_SBOC_EMAIL_SEND_LIMIT || $low_date > substr($a->attendee->created, 0, 10)){	      
-	  if ($low_date > substr($a->attendee->created, 0, 10)){	      
+	$tz_name = _eventbrite_sboc_get_timezone_by_index(variable_get('eventbrite_event_registrations_tz', 0));
+	$send_limit = variable_get('eventbrite_sboc_email_send_limit', EVENTBRITE_SBOC_EMAIL_SEND_LIMIT);
+	foreach($attendees as $a){      
+	  if ($ctr >= $send_limit || $low_date > substr(_eventbrite_sboc_get_date_in_tz($a->attendee->created, $tz_name), 0, 10)){	      
 		 break;		
 	  } 
 	  if (_eventbrite_sboc_add_to_pending_list($a)){ 	 
@@ -520,9 +537,8 @@
 	    $newAttendee->email = $a->attendee->email;
 	    $newAttendee->id = $a->attendee->id;
 	    $newAttendee->event_id = $a->attendee->event_id;
-	    $newAttendee->order_id = $a->attendee->order_id;
-		//$newAttendee->created = substr($a->attendee->created, 0, EVENTBRITE_SBOC_DATE_SUB_PART);	
-		$newAttendee->created = _eventbrite_sboc_get_date_in_tz($a->attendee->created, EVENTBRITE_SBOC_DATE_PACIFIC_TZ);	
+	    $newAttendee->order_id = $a->attendee->order_id;			
+		$newAttendee->created = _eventbrite_sboc_get_date_in_tz($a->attendee->created, $tz_name);
 	    $newAttendee->amount_paid = $a->attendee->amount_paid;
 	    $newAttendee->registration_type = ($a->attendee->amount_paid > EVENTBRITE_SBOC_REGISTRATION_AMT_STD ? 'Premium' : 'Standard');
 	    $newAttendee->ans_id = _eventbrite_sboc_answer_id($a->attendee->answers, EVENTBRITE_SBOC_QUESTION_ID_CATEGORY);
@@ -554,12 +570,13 @@
  
  function _eventbrite_sboc_get_attendees_from_db(){  
    $low_date = _eventbrite_sboc_get_low_date();
+   $upper_limit = variable_get('eventbrite_sboc_email_send_limit', EVENTBRITE_SBOC_EMAIL_SEND_LIMIT);
    
    $result = db_select('eventbrite_sboc_attendees', 'e')  
    ->where('(e.event_id = \''. _eventbrite_sboc_event_id(). '\') AND (DATE_FORMAT(e.create_date,\'%Y-%m-%d\') >= \''. $low_date. '\')' )
    ->fields('e', array('event_id', 'attendee_id', 'order_id', 'email_address', 'email_sent', 'email_send_date',))   
-   ->orderBy('attendee_id', EVENTBRITE_SBOC_LIST_SORT_ORDER)
-   ->range(0, 50)
+   ->orderBy('attendee_id', variable_get('eventbrite_sboc_app_data_sort_order', EVENTBRITE_SBOC_LIST_SORT_ORDER))
+   ->range(0, $upper_limit * 2)
    ->execute()
    ->fetchAll();   
    return $result;
@@ -578,11 +595,12 @@
    ->extend('TableSort')
    ->orderByHeader($header)
    ->fields('e', array('order_id', 'create_date', 'last_name', 'first_name', 'email_address', 'category', 'email_sent', 'email_send_date',))   
-   ->orderBy('attendee_id', EVENTBRITE_SBOC_LIST_SORT_ORDER)
+   ->orderBy('attendee_id', variable_get('eventbrite_sboc_app_data_sort_order', EVENTBRITE_SBOC_LIST_SORT_ORDER))
    ->execute()
    ->fetchAll()
    ;   
-   //return (string)$result;
+   /*drupal_set_message((string)$result);
+   return (string)$result; */
    return $result;
  } 
  
@@ -595,7 +613,7 @@
    $result = db_select('eventbrite_sboc_attendees', 'e')  
    ->where('(e.event_id = \''. _eventbrite_sboc_event_id(). '\') AND (DATE_FORMAT(e.create_date,\'%Y-%m-%d\') BETWEEN \''. $start_date . '\' AND \''.$end_date .'\')' )
    ->fields('e')   
-   ->orderBy('attendee_id', EVENTBRITE_SBOC_LIST_SORT_ORDER)
+   ->orderBy('attendee_id', variable_get('eventbrite_sboc_app_data_sort_order', EVENTBRITE_SBOC_LIST_SORT_ORDER))
    ->execute();   
    
    return $result->rowCount();

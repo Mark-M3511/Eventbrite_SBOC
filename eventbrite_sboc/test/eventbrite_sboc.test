@@ -2,14 +2,14 @@
  /**
  * Unit and Functional testing for Eventbrite SBOC module
  */
- class EventbriteSBOCWebTestCase extends DrupalWebTestCase{
+ class EventbriteSBOCWebTestCase extends DrupalWebTestCase {
  
    protected $privileged_user;
  
    public static function getInfo() {
 		return array(
 			'name' => 'Eventbrite SBOC Main Module Tests',
-			'description' => 'Eventbrite SBOC Functional Testing - extending DrupalWebTestCase',
+			'description' => 'Eventbrite SBOC Functional Testing - System',
 			'group' => 'Eventbrite SBOC',
         );
    }
@@ -115,13 +115,19 @@
       $_SESSION['attendees_to_db'] = array();
 	  $event_id = $this->randomName(10);
 	  variable_set('eventbrite_event_id', $event_id);
-      for ($ctr = 0; $ctr < 10; $ctr++){
+	  /* Rewrite to use datetime routines with timezone configuration*/
+	  $create_date = _eventbrite_sboc_get_timestamp("-100 day");
+      for ($ctr = 0; $ctr < 100; $ctr++){
+	    if ($ctr % 2 == 0) {
+		   $i = -100 + $ctr;
+		   $create_date = _eventbrite_sboc_get_timestamp("$i day");
+		}
 	    $_SESSION['attendees_to_db'][] = array(
 			'event_id' => $event_id,
 			'attendee_id' => mt_rand(100, 999),
-			'create_date' => date('Y-m-d H:i:s', time() - (24 * 60 * 60)),
+			'create_date' => $create_date,
 			'order_id' => mt_rand(1000, 10000),
-			'email_address' => $this->randomName(10),
+			'email_address' => $this->randomName(10). '@test.com',
 			'last_name' => $this->randomName(10),
 			'first_name' => $this->randomName(10),
 			'category' => $this->randomName(1), 
@@ -130,7 +136,7 @@
 			'email_send_date' => date('Y-m-d H:i:s'),
 	    );
 	  }
-	  //debug($_SESSION['attendees_to_db']);
+	  debug($_SESSION['attendees_to_db']);
 	  _eventbrite_sboc_insert_attendees_to_db();
 	  $header = array( 
 	     array('data' => 'Order Id', 'field' => 'order_id', 'sort' => 'desc'),
@@ -157,13 +163,13 @@
   
 }
   
- class EventbriteSBOCFormsTestCase extends DrupalWebTestCase{
+ class EventbriteSBOCFormsTestCase extends DrupalWebTestCase {
    protected $privileged_user;
  
    public static function getInfo() {
 		return array(
 			'name' => 'Eventbrite SBOC Form Tests',
-			'description' => 'Eventbrite SBOC Functional Testing - extending FormsTestCase',
+			'description' => 'Eventbrite SBOC Functional Testing - Forms',
 			'group' => 'Eventbrite SBOC',
         );
    }
@@ -202,8 +208,24 @@
 	 $this->drupalPost('admin/config/system/eventbrite_sboc/attendee_report', $edit, t('Run Report'));
 	 $this->assertText(t('The end date is invalid'));
 	 
-   }
-    
-   
+   }   
+       
  }
+ 
+ class EventbriteSBOCUnitTestCase extends DrupalUnitTestCase {
+	   public static function getInfo() {
+          return array(
+			'name' => 'Eventbrite SBOC Unit Tests',
+			'description' => 'Eventbrite SBOC Unit Testing',
+			'group' => 'Eventbrite SBOC',
+          ); 
+	   }  
+	   
+	   public function testGetTimeStampFunction(){
+	       $date_val = _eventbrite_sboc_get_timestamp("2013-01-01");
+		   date_default_timezone_set('America/Toronto');
+		   debug($date_val . ' Timezone: '. date_default_timezone(FALSE));
+		   $this->assertTrue(date('Y-m-d', strtotime($date_val)) == "2013-01-01", 'Date returned = 2013-01-01');
+	   }
+  }	
   
