@@ -199,7 +199,7 @@
    //drupal_set_message($form_id);
    switch($form_id){
      case '_eventbrite_sboc_debug_config_form':
-	   $form['#submit'][] = '_eventbrite_sboc_debug_set_pl_timespan';
+	   /* $form['#submit'][] = '_eventbrite_sboc_debug_set_pl_timespan'; */
 	   break;
 	 case '_eventbrite_sboc_pending_list_form':
        $form['#submit'][] = '_eventbrite_sboc_generate_pending_list';	 
@@ -315,7 +315,6 @@
   
  
  function _eventbrite_sboc_sort_attendees_by_id($a, $b){   
-
    $result = -1;
    $sort = variable_get('eventbrite_sboc_app_data_sort_order', EVENTBRITE_SBOC_LIST_SORT_ORDER);
    if ($a->attendee->id == $b->attendee->id){
@@ -572,13 +571,15 @@
    $low_date = _eventbrite_sboc_get_low_date();
    $upper_limit = variable_get('eventbrite_sboc_email_send_limit', EVENTBRITE_SBOC_EMAIL_SEND_LIMIT);
    
-   $result = db_select('eventbrite_sboc_attendees', 'e')  
+   $query = db_select('eventbrite_sboc_attendees', 'e')  
    ->where('(e.event_id = \''. _eventbrite_sboc_event_id(). '\') AND (DATE_FORMAT(e.create_date,\'%Y-%m-%d\') >= \''. $low_date. '\')' )
    ->fields('e', array('event_id', 'attendee_id', 'order_id', 'email_address', 'email_sent', 'email_send_date',))   
    ->orderBy('attendee_id', variable_get('eventbrite_sboc_app_data_sort_order', EVENTBRITE_SBOC_LIST_SORT_ORDER))
-   ->range(0, $upper_limit * 2)
-   ->execute()
-   ->fetchAll();   
+   ->range(0, $upper_limit * 2);
+   _eventbrite_sboc_debug('_eventbrite_sboc_display_sql', array('query' => $query));
+   $result = $query->execute()->fetchAll();
+   /* ->execute()
+   ->fetchAll();  */  
    return $result;
  }  
  
@@ -588,21 +589,24 @@
    $start_date = date('Y-m-d',strtotime($start_date));
    $end_date = date('Y-m-d',strtotime($end_date));
    
-   $result = db_select('eventbrite_sboc_attendees', 'e')  
+   $query = db_select('eventbrite_sboc_attendees', 'e')  
    ->where('(e.event_id = \''. _eventbrite_sboc_event_id(). '\') AND (DATE_FORMAT(e.create_date,\'%Y-%m-%d\') BETWEEN \''. $start_date . '\' AND \''.$end_date .'\')' )
    ->extend('PagerDefault')
    ->limit(10)  
    ->extend('TableSort')
    ->orderByHeader($header)
    ->fields('e', array('order_id', 'create_date', 'last_name', 'first_name', 'email_address', 'category', 'email_sent', 'email_send_date',))   
-   ->orderBy('attendee_id', variable_get('eventbrite_sboc_app_data_sort_order', EVENTBRITE_SBOC_LIST_SORT_ORDER))
-   ->execute()
-   ->fetchAll()
-   ;   
-   /*drupal_set_message((string)$result);
-   return (string)$result; */
+   ->orderBy('attendee_id', variable_get('eventbrite_sboc_app_data_sort_order', EVENTBRITE_SBOC_LIST_SORT_ORDER));
+   _eventbrite_sboc_debug('_eventbrite_sboc_display_sql', array('query' => $query));
+   $result = $query->execute()->fetchAll();   
    return $result;
  } 
+ 
+ function _eventbrite_sboc_display_sql($query){
+   if (variable_get('eventbrite_sboc_app_show_sql', 0) == 1){
+     dpq($query);
+   }	 
+ }
  
  function _eventbrite_sboc_get_attendees_from_db_paged_count($start_date, $end_date){  
    $start_date = check_plain($start_date);
@@ -630,7 +634,7 @@
    return $result;
  }
 
- function _eventbrite_sboc_insert_attendees_to_db(){
+ function _eventbrite_sboc_insert_attendees_to_db($rows){
     $query = db_insert('eventbrite_sboc_attendees')
 	  ->fields(array('event_id', 
 	  'attendee_id', 
@@ -644,8 +648,8 @@
 	  'email_sent', 
 	  'email_send_date',));
 	  
-	foreach($_SESSION['attendees_to_db'] as $rows){
-	  $query->values($rows); 	
+	foreach($rows as $row){
+	  $query->values($row); 
     }	
 	
 	$query->execute();  
@@ -797,8 +801,7 @@
 			'order_type' => $a->order_type, 
 			'email_sent' => $a->email_sent, 
 			'email_send_date' => $a->email_send_date,
-	    );
-	   // _eventbrite_sboc_insert_attendee_to_db($a);	   
+	    );  
 	 }
 	 $ctr++;
 	 if ($debug_mode){	    
@@ -807,7 +810,7 @@
 		}
 	 }
    }   
-   _eventbrite_sboc_insert_attendees_to_db();   
+   _eventbrite_sboc_insert_attendees_to_db($_SESSION['attendees_to_db']);
    $to = variable_get('eventbrite_sboc_email_return_address', ''); 
    if (count($attendees) && !empty($to)){
 	 $summary = theme('table', _eventbrite_sboc_summary_table_array($attendees));
@@ -1024,5 +1027,8 @@
    $result .= 'End: ' . date('F j, Y g:i a', strtotime($eb_event_info->event->end_date)) . '<br />';
    $result .= 'Capacity: <strong>' . $eb_event_info->event->capacity . '</strong><br />';
    $result .= 'Attendee Count: <strong>' . $eb_event_info->event->num_attendee_rows . '</strong><br />';
+   $pct = $eb_event_info->event->num_attendee_rows / $eb_event_info->event->capacity * 100;
+   $pct = round($pct, 1);
+   $result .= format_string('Progress: <strong>!pct%</strong> of goal', array('!pct' => $pct)) .'<br />';
    return $result;
  }

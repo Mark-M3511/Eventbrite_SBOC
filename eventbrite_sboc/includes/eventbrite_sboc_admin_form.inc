@@ -145,11 +145,15 @@
 		'#description' => t('Enter the id for the event'),
 	);
 	
+	$options = _eventbrite_sboc_get_timezone_list();
+	$search_item = _eventbrite_sboc_get_php_safe_tz(date_default_timezone(FALSE));
+	$index = array_search($search_item, timezone_identifiers_list());
+	$index = ($index) ? $index : 0;
 	$form['eventbrite_event_settings']['eventbrite_event_registrations_tz'] = array(
 		'#type' => 'select',
 		'#title' => t('Attendee Registration Time Zone'),
-		'#default_value' => variable_get('eventbrite_event_registrations_tz', 0),
-		'#options' => _eventbrite_sboc_get_timezone_list(),
+		'#default_value' => variable_get('eventbrite_event_registrations_tz', $index),
+		'#options' => $options,
 		'#description' => t('Identify the time zone used to timestamp attendee records'),
 	);
 	
@@ -181,26 +185,43 @@
 		'#type' => 'fieldset',
 		'#title' => t('Debug Settings'),
 	);
- 
-    $form['eventbrite_app_debug_settings']['eventbrite_sboc_app_debug'] = array(
+	
+	$form['eventbrite_app_debug_settings']['eventbrite_sboc_app_debug'] = array(
 		'#type' => 'checkbox',
 		'#title' => t('Debug Mode'),
 		'#default_value' => variable_get('eventbrite_sboc_app_debug', 0),
 		'#description' => t('Turn on/off debug mode'),
 	);
+ 
+    $form['eventbrite_app_debug_settings']['container'] = array(
+		'#type' => 'container',
+		'#states' => array(
+			'invisible' => array(
+			'input[name="eventbrite_sboc_app_debug"]' => array('checked' => FALSE),
+			),
+		),
+	);
+  
 	
-	$form['eventbrite_app_debug_settings']['eventbrite_sboc_app_display_debug_data_rows'] = array(
+	$form['eventbrite_app_debug_settings']['container']['eventbrite_sboc_app_display_debug_data_rows'] = array(
 		'#type' => 'checkbox',
 		'#title' => t('Debug mode: Display data records'),
 		'#default_value' => variable_get('eventbrite_sboc_app_display_debug_data_rows', 0),
 		'#description' => t('Display data records created during interaction with EB service. (CAUTION: Potentially very slow operation)'),
 	);
 	
-	$form['eventbrite_app_debug_settings']['eventbrite_sboc_app_full_eb_list_attendees'] = array(
+	$form['eventbrite_app_debug_settings']['container']['eventbrite_sboc_app_full_eb_list_attendees'] = array(
 		'#type' => 'checkbox',
 		'#title' => t('Debug mode: Display full Eventbrite attendee list'),
 		'#default_value' => variable_get('eventbrite_sboc_app_full_eb_list_attendees', 0),
 		'#description' => t('Display full list of attendees fetched from Eventbrite. (CAUTION: Potentially very slow operation)'),
+	);
+	
+	$form['eventbrite_app_debug_settings']['container']['eventbrite_sboc_app_show_sql'] = array(
+		'#type' => 'checkbox',
+		'#title' => t('Debug mode: Show sql/dml/ddl statements'),
+		'#default_value' => variable_get('eventbrite_sboc_app_show_sql', 0),
+		'#description' => t('Display sql statements executed'),
 	);
 	
 	$options = array('No Limit');
@@ -208,17 +229,18 @@
 	   $options[] = $ctr; 	
 	}
 
-  /*   $option_days = drupal_map_assoc(array(1, 2, 3, 4, 5, 6, 7, 8, 9, 10));
+    $option_days = drupal_map_assoc(array(1, 2, 3, 4, 5, 6, 7, 8, 9, 10));
 	$num_days = array_search((int)$_SESSION['pending_list_time_span'], $option_days);
 	$form['eventbrite_app_debug_settings']['eventbrite_sboc_app_debug_pl_time_span'] = array(
-		'#type' => 'select',
+		/* '#type' => 'select', */
+		'#type' => 'hidden',
 		'#title' => t('Debug mode: Time span (in days) for pending list'),
         '#options' =>  $option_days,	   
 		'#default_value' => ((isset($_SESSION['pending_list_time_span'])) ? $num_days : 1),
 		'#description' => t('Select the time span (in days) used to bulid the list of pending attendees. <strong>Please Note:</strong> This setting is session specific.'),
-	);   */
+	);   
 	
-	$form['eventbrite_app_debug_settings']['eventbrite_sboc_app_debug_send_limit'] = array(
+	$form['eventbrite_app_debug_settings']['container']['eventbrite_sboc_app_debug_send_limit'] = array(
 		'#type' => 'select',
 		'#title' => t('Debug mode: Number of emails to send'),
         '#options' => $options,	   
@@ -243,11 +265,14 @@
 
  function _eventbrite_sboc_config_form2($form, &$form_state) {
  
+    $file = (variable_get('eventbrite_sboc_filename_1', '') != '');
+	$file = ($file || variable_get('eventbrite_sboc_filename_2', '') != '');
+	$file = ($file || variable_get('eventbrite_sboc_filename_3', '') != '');
 	$form['eventbrite_sboc_file_names'] = array(
 		'#type' => 'fieldset',
 		'#title' => t('Files to be emailed'),
 		'#collapsible' => TRUE,
-		'#collapsed'   => TRUE,
+		'#collapsed'   => $file,
 	);
 	
 	$form['eventbrite_sboc_file_names']['eventbrite_sboc_filename_1'] = array(
@@ -283,6 +308,8 @@
 	$form['eventbrite_sboc_file_node_title'] = array(
 		'#type' => 'fieldset',
 		'#title' => t('Message Source'),
+		'#collapsible' => TRUE,
+		'#collapsed'   => (variable_get('eventbrite_sboc_content_title', '') != ''),
 	);
 	
     $form['eventbrite_sboc_file_node_title']['eventbrite_sboc_content_title'] = array(
@@ -297,7 +324,7 @@
 	
 	$form['eventbrite_sboc_email_info'] = array(
 		'#type' => 'fieldset',
-		'#title' => t('Email Settings'),
+		'#title' => t('Email Settings'),		
 	);
 	
 	$form['eventbrite_sboc_email_info']['eventbrite_sboc_email_return_address'] = array(
