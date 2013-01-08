@@ -920,7 +920,8 @@
 	  usort($chunks[$current_page], "_eventbrite_sboc_sort_pending");
    }   
 	  
-   $caption = '<strong>'. t('Attendees not yet emailed - (!count)  - <a href="!link">New List >>', array('!count' => count($attendees), '!link' => 'admin/config/system/eventbrite_sboc/api_pending_list')).'</strong>';
+   $link = url('admin/config/system/eventbrite_sboc/api_pending_list');	  
+   $caption = '<strong>'. t('Attendees not yet emailed - (!count)  - <a href="!link">New List >>', array('!count' => count($attendees), '!link' => $link)).'</strong>';
   
    $rows = array();
    if (count($chunks) > 0){  
