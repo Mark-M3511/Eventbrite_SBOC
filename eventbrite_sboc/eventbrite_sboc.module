@@ -792,7 +792,7 @@
 	   $_SESSION['attendees_to_db'][] = array(
 			'event_id' => $a->event_id,
 			'attendee_id' => $a->id,
-			'create_date' => $timestamp,
+			'create_date' => $a->created,
 			'order_id' => $a->order_id,
 			'email_address' => $a->email,
 			'last_name' => $a->last_name,
@@ -955,8 +955,8 @@
 	
    $ctr = 0;	
    foreach($attendees as $a){
-     $data[] = array(++$ctr, $a->order_id, date('Y-m-d', strtotime($a->create_date)), $a->email_address, 
-	 strtoupper($a->last_name), strtoupper($a->first_name), $a->category, $a->email_sent, $a->email_send_date,);
+     $data[] = array(++$ctr, $a->order_id, date('Y-m-d H:i:s', strtotime($a->create_date)), $a->email_address, 
+	 strtoupper($a->last_name), strtoupper($a->first_name), $a->category, (!empty($a->email_sent) ? 'Yes': 'No'), $a->email_send_date,);
    }     
    
    /********Add sorting routine here*******/
