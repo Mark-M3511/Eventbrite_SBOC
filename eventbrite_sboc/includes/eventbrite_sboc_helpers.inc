@@ -117,4 +117,13 @@
  function _eventbrite_sboc_get_php_safe_tz($timezone){
     return str_replace(' ', '_', $timezone);
  }
+ 
+ function _eventbrite_sboc_get_page_num(){
+   $qp = drupal_get_query_parameters();
+   $page_num = 0;
+   if (!empty($qp) && isset($qp['page'])){
+      $page_num += (int)$qp['page'];
+   }
+   return $page_num;
+ }
 

@@ -909,11 +909,12 @@
     );	
    
    $ctr = 0;	
+   $current_page = pager_default_initialize(count($attendees), EVENTBRITE_SBOC_PAGE_LIMIT); 
+   
    foreach($attendees as $a){
      $data[] = array(++$ctr, $a->order_id, $a->created, $a->email, strtoupper($a->last_name), strtoupper($a->first_name), $a->category_name, $a->region, $a->amount_paid, $a->order_type,);
    }  
    
-   $current_page = pager_default_initialize(count($attendees), EVENTBRITE_SBOC_PAGE_LIMIT);   
    $chunks = array_chunk($data, EVENTBRITE_SBOC_PAGE_LIMIT, TRUE); 
 
    if (isset($_GET['sort']) && isset($_GET['order']) && (count($chunks) > 0)){
@@ -954,14 +955,11 @@
    $attendees = _eventbrite_sboc_get_attendees_from_db_paged($start_date, $end_date, $header);
 	
    $ctr = 0;	
+   $page_num = _eventbrite_sboc_get_page_num();
    foreach($attendees as $a){
-     $data[] = array(++$ctr, $a->order_id, date('Y-m-d H:i:s', strtotime($a->create_date)), $a->email_address, 
+     $data[] = array(++$ctr + (EVENTBRITE_SBOC_PAGE_LIMIT * $page_num), $a->order_id, date('Y-m-d H:i:s', strtotime($a->create_date)), $a->email_address, 
 	 strtoupper($a->last_name), strtoupper($a->first_name), $a->category, (!empty($a->email_sent) ? 'Yes': 'No'), $a->email_send_date,);
-   }     
-   
-   /********Add sorting routine here*******/
-   
-   /********Add sorting routine here*******/
+   } 
    
    $link = url('admin/config/system/eventbrite_sboc/attendee_report');
    $count = _eventbrite_sboc_get_attendees_from_db_paged_count($start_date, $end_date);
