@@ -428,7 +428,7 @@
  function _eventbrite_sboc_generate_pending_list($form, &$form_state){
 	$num_days = (int)$form_state['values']['eventbrite_sboc_app_pl_time_span'];
 	$_SESSION['pending_list_time_span'] = $num_days;
-	drupal_set_message(t('Time span used to select records for \'Pending List\'= !days day(s). Low date: !low_date', array('!days' => $num_days, '!low_date' => _eventbrite_sboc_get_date("-$num_days day"))));
+	drupal_set_message(t('Time span used to select records for \'Pending List\'= !days day(s). Low Date: !low_date', array('!days' => $num_days, '!low_date' => _eventbrite_sboc_get_date("-$num_days day"))));
 	variable_set('eventbrite_sboc_app_data_sort_order', $form_state['values']['eventbrite_sboc_app_data_sort_order']);
 	$form_state['redirect'] = 'admin/config/system/eventbrite_sboc/api_pending_list/1';
  }
@@ -505,7 +505,7 @@
    /* Date and time record created on EB */
    $tz_name = _eventbrite_sboc_get_timezone_by_index(variable_get('eventbrite_event_registrations_tz', 0));
    $create_date = substr(_eventbrite_sboc_get_date_in_tz($attendee->attendee->created, $tz_name), 0, EVENTBRITE_SBOC_DATE_SUB_PART);
-   /* Flag to indicate record does or does not exist in SBOC database */
+   /* Flag to indicate whether current record exists in SBOC database */
    $attendee_in_db = _eventbrite_sboc_search_saved_attendees($_SESSION['attendees_in_db'], $attendee->attendee->id);
    /* Low date calculation */
    $low_date = _eventbrite_sboc_get_low_date();
@@ -559,11 +559,10 @@
         $pending_ctr++;		
 	  }
 	  $ctr++;	  
-	}	
-	watchdog(EVENTBRITE_SBOC_MODULE_NAME, t('Total rows processed: !ctr'), array('!ctr' => $ctr), WATCHDOG_NOTICE);
-	watchdog(EVENTBRITE_SBOC_MODULE_NAME, t('Total rows added to \'Pending List\': !pending_ctr'), array('!pending_ctr' => $pending_ctr), WATCHDOG_NOTICE);
-	watchdog(EVENTBRITE_SBOC_MODULE_NAME, t('Low date: !low_date'), array('!low_date' => $low_date), WATCHDOG_NOTICE);
-	
+	}		
+	$params = array('!ctr' => $ctr, '!pending_ctr' => $pending_ctr,'!low_date' => $low_date);
+	$msg = t('New Reg\'s: !ctr | Pending: !pending_ctr | Low Date: !low_date', $params);
+	watchdog(EVENTBRITE_SBOC_MODULE_NAME, $msg, array(), WATCHDOG_NOTICE);
 	return $pending_ctr;
  }
  
@@ -578,8 +577,6 @@
    ->range(0, $upper_limit * 2);
    _eventbrite_sboc_debug('_eventbrite_sboc_display_sql', array('query' => $query));
    $result = $query->execute()->fetchAll();
-   /* ->execute()
-   ->fetchAll();  */  
    return $result;
  }  
  
@@ -1025,9 +1022,13 @@
    $result .= 'Start: ' . date('F j, Y g:i a', strtotime($eb_event_info->event->start_date)) . '<br />';
    $result .= 'End: ' . date('F j, Y g:i a', strtotime($eb_event_info->event->end_date)) . '<br />';
    $result .= 'Capacity: <strong>' . $eb_event_info->event->capacity . '</strong><br />';
-   $result .= 'Attendee Count: <strong>' . $eb_event_info->event->num_attendee_rows . '</strong><br />';
+   $result .= 'Attendee Count: <strong>' . $eb_event_info->event->num_attendee_rows . '</strong>';
+   $result .= '<hr style="width: 100%; border-bottom: 1px solid #C6CDCF;">';
+   $pct =  $eb_event_info->event->num_attendee_rows / variable_get('eventbrite_event_registration_target', 100) * 100;
+   $pct = round($pct, 1);
+   $result .= format_string('Percentage of target: <strong>!pct%</strong> of goal', array('!pct' => $pct)) .'<br />';   
    $pct = $eb_event_info->event->num_attendee_rows / $eb_event_info->event->capacity * 100;
    $pct = round($pct, 1);
-   $result .= format_string('Progress: <strong>!pct%</strong> of goal', array('!pct' => $pct)) .'<br />';
+   $result .= format_string('Percentage of capacity: <strong>!pct%</strong> of goal', array('!pct' => $pct)) .'<br />';
    return $result;
  }

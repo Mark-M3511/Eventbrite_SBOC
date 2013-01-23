@@ -16,6 +16,7 @@
  require_once(drupal_get_path('module', 'eventbrite_sboc'). '/includes/eventbrite_sboc_helpers.inc');
  
  define('EVENTBRITE_SBOC_MODULE_DEBUG_SEND_LIMIT', 11);
+ define('EVENTBRITE_SBOC_MODULE_MAX_TARGET', 20000);
  
  function _eventbrite_sboc_build_config_forms(){ 
 	$output = drupal_render(drupal_get_form('_eventbrite_sboc_debug_config_form_api_credentials'));
@@ -143,6 +144,27 @@
 		'#size' => 50,
 		'#maxlength' => 250,
 		'#description' => t('Enter the id for the event'),
+	);
+		
+	$target = array();
+	$ctr = 0;
+    while ($ctr < EVENTBRITE_SBOC_MODULE_MAX_TARGET){
+	  if ($ctr < 1000){
+	    $ctr += 100;
+	  }else if ($ctr < 10000){
+	    $ctr += 500;
+	  }else{
+	    $ctr += 1000; 
+	  }
+	  $target[] = $ctr; 
+	}
+	
+	$form['eventbrite_event_settings']['eventbrite_event_registration_target'] = array(
+		'#type' => 'select',
+		'#title' => t('Event Registration Target'),
+		'#default_value' => variable_get('eventbrite_event_registration_target', 100),
+		'#options' => drupal_map_assoc($target),
+		'#description' => t('Select a number'),
 	);
 	
 	$options = _eventbrite_sboc_get_timezone_list();
