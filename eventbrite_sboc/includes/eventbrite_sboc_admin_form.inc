@@ -186,7 +186,7 @@
 	  '#suffix' => '</p>',
 	);
 	
-	$form['eventbrite_app_settings'] = array(
+	/* $form['eventbrite_app_settings'] = array(
 	    '#tree' => TRUE,
 		'#type' => 'fieldset',
 		'#title' => t('Service Settings'),
@@ -197,15 +197,15 @@
 		'#title' => t('Service is active'),
 		'#default_value' => variable_get('eventbrite_sboc_app_state', 0),
 		'#description' => t('Check to start service | Uncheck to shut down service'),
-	);		
+	);	 */	
 	
     return system_settings_form($form);
  }
  
- function _eventbrite_sboc_config_form_service()
+ function _eventbrite_sboc_config_form_service($form, &$form_state)
  {
     $form['eventbrite_app_settings'] = array(
-	    '#tree' => TRUE,
+	    /* '#tree' => TRUE, */
 		'#type' => 'fieldset',
 		'#title' => t('Service Settings'),
 	);
@@ -271,7 +271,10 @@
 	}
 
     $option_days = drupal_map_assoc(array(1, 2, 3, 4, 5, 6, 7, 8, 9, 10));
-	$num_days = array_search((int)$_SESSION['pending_list_time_span'], $option_days);
+	$num_days = 1;
+	if (isset($_SESSION['pending_list_time_span'])){
+		$num_days = array_search((int)$_SESSION['pending_list_time_span'], $option_days);
+	}
 	$form['eventbrite_app_debug_settings']['eventbrite_sboc_app_debug_pl_time_span'] = array(
 		/* '#type' => 'select', */
 		'#type' => 'hidden',
