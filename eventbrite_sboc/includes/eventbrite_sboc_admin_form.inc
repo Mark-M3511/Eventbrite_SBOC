@@ -19,13 +19,14 @@
  define('EVENTBRITE_SBOC_MODULE_MAX_TARGET', 20000);
  
  function _eventbrite_sboc_build_config_forms(){ 
-	$output = drupal_render(drupal_get_form('_eventbrite_sboc_debug_config_form_api_credentials'));
-	$output .= drupal_render(drupal_get_form('_eventbrite_sboc_debug_config_form_client_credentials'));	
-	$output .= drupal_render(drupal_get_form('_eventbrite_sboc_debug_config_form_service'));	
+	$output = drupal_render(drupal_get_form('_eventbrite_sboc_config_form_api_credentials'));
+	$output .= drupal_render(drupal_get_form('_eventbrite_sboc_config_form_client_credentials'));		
+	$output .= drupal_render(drupal_get_form('_eventbrite_sboc_config_form_event_settings'));	
+	$output .= drupal_render(drupal_get_form('_eventbrite_sboc_config_form_service'));	
 	return $output;
  }
  
- function _eventbrite_sboc_debug_config_form_api_credentials($form, &$form_state){
+ function _eventbrite_sboc_config_form_api_credentials($form, &$form_state){
  
  
     $api_key = check_plain(_eventbrite_sboc_api_key());
@@ -99,7 +100,7 @@
    return system_settings_form($form);
  }
  
- function _eventbrite_sboc_debug_config_form_client_credentials($form, &$form_state){
+ function _eventbrite_sboc_config_form_client_credentials($form, &$form_state){
  
     $user_email = _eventbrite_sboc_api_user_email();
  
@@ -130,7 +131,7 @@
 	return system_settings_form($form); 
  }
  
- function _eventbrite_sboc_debug_config_form_service($form, &$form_state){
+ function _eventbrite_sboc_config_form_event_settings($form, &$form_state){
  
     $form['eventbrite_event_settings'] = array(
 		'#type' => 'fieldset',
@@ -186,6 +187,24 @@
 	);
 	
 	$form['eventbrite_app_settings'] = array(
+	    '#tree' => TRUE,
+		'#type' => 'fieldset',
+		'#title' => t('Service Settings'),
+	);
+		
+	$form['eventbrite_app_settings']['eventbrite_sboc_app_state'] = array(
+		'#type' => 'checkbox',
+		'#title' => t('Service is active'),
+		'#default_value' => variable_get('eventbrite_sboc_app_state', 0),
+		'#description' => t('Check to start service | Uncheck to shut down service'),
+	);		
+	
+    return system_settings_form($form);
+ }
+ 
+ function _eventbrite_sboc_config_form_service()
+ {
+    $form['eventbrite_app_settings'] = array(
 	    '#tree' => TRUE,
 		'#type' => 'fieldset',
 		'#title' => t('Service Settings'),

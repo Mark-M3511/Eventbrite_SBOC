@@ -502,7 +502,7 @@
  }
  
  function _eventbrite_sboc_add_to_pending_list($attendee){
-   /* Date and time record created on EB */
+   /* Timestamp of registration on EB */
    $tz_name = _eventbrite_sboc_get_timezone_by_index(variable_get('eventbrite_event_registrations_tz', 0));
    $create_date = substr(_eventbrite_sboc_get_date_in_tz($attendee->attendee->created, $tz_name), 0, EVENTBRITE_SBOC_DATE_SUB_PART);
    /* Flag to indicate whether current record exists in SBOC database */
@@ -560,9 +560,9 @@
 	  }
 	  $ctr++;	  
 	}		
-	$params = array('!ctr' => $ctr, '!pending_ctr' => $pending_ctr,'!low_date' => $low_date);
-	$msg = t('New Reg\'s: !ctr | Pending: !pending_ctr | Low Date: !low_date', $params);
-	watchdog(EVENTBRITE_SBOC_MODULE_NAME, $msg, array(), WATCHDOG_NOTICE);
+	$params = array('!low_date' => $low_date, '!ctr' => $ctr, '!pending_ctr' => $pending_ctr,);
+	$msg = t('Low Date: !low_date | New Reg\'s: !ctr | Emails Pending: !pending_ctr');
+	watchdog(EVENTBRITE_SBOC_MODULE_NAME, $msg, $params, WATCHDOG_NOTICE);
 	return $pending_ctr;
  }
  
