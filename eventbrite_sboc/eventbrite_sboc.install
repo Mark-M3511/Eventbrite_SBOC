@@ -98,6 +98,62 @@ function eventbrite_sboc_schema(){
 
   return $schema;
 } 
+
+/**
+ * Eventbrite SBOC update #1
+ * Add new columns to table 'eventbrite_sboc_attendees'
+ * Updated: 2013-07-10
+ */
+ function eventbrite_sboc_update_7100(){
+   $msg = 'New columns added to table \'eventbrite_sboc_attendees\'';
+   
+   $init_val = 'Unspecified';
+   
+   $schema_1 = array(
+	   'description' => 'Registration type (e.g. Premium, Standard, Unspecified)', 
+       'type' => 'varchar',  
+       'length' => 30,        
+       'not null' => TRUE,
+	   'initial' => $init_val,
+	);
+	
+	$schema_2 = array(
+	   'description' => 'Region name  (e.g. Toronto, Mississauga etc.)', 
+       'type' => 'varchar',  
+       'length' => 100,        
+       'not null' => TRUE,
+	   'initial' => $init_val,
+	);
+   
+   /* $keys_new = array(
+      'indexes' => array(
+	     'eventbrite_sboc_attendees_reg_type' => array('reg_type'),
+		 'eventbrite_sboc_attendees_region' => array('region'),
+      ),
+   ); */
+   
+   db_add_field('eventbrite_sboc_attendees', 'reg_type', $schema_1);
+   db_add_field('eventbrite_sboc_attendees', 'region_name', $schema_2);
+   
+   return $msg;
+ }
+ 
+ /**
+ * Eventbrite SBOC update #2
+ * Add new indexes to table 'eventbrite_sboc_attendees'
+ * Updated: 2013-07-10
+ */
+ function eventbrite_sboc_update_7101(){ 
+   $msg = 'New indexes added to table \'eventbrite_sboc_attendees\'';
+   
+   $init_val = 'Unspecified';
+   $table_name = 'eventbrite_sboc_attendees';
+   
+   db_add_index($table_name, $table_name. '_reg_type', array('reg_type',));
+   db_add_index($table_name, $table_name. '_region_name', array('region_name',));
+   
+   return $msg;
+ }
  
 /**
  * Implementation of hook_uninstall().

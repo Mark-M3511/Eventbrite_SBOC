@@ -449,8 +449,9 @@
  }
 
  function _eventbrite_sboc_admin_send_email($email_address) {
-   _eventbrite_sboc_get_pending_list();
-   _eventbrite_sboc_process_emails($email_address);
+//    _eventbrite_sboc_get_pending_list();
+//    _eventbrite_sboc_process_emails($email_address);
+	 _eventbrite_sboc_send_email($email_address, 'This email is being sent as a test.');
  }
  
 /*
