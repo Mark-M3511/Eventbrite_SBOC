@@ -108,8 +108,8 @@
  
  function _eventbrite_sboc_get_timezone_by_index($index){
    $tz_list = timezone_identifiers_list();
-   if ($index < 0 ||$index > count($tz_list)){
-     $index = 0;
+   if ($index < 0 || $index >= count($tz_list)){
+      $index = 0;
    }
    return _eventbrite_sboc_get_php_safe_tz($tz_list[$index]);
  }
