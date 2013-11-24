@@ -465,7 +465,9 @@ function _eventbrite_sboc_email_auto_sender($data){
    $result = array();  
    $event_id = array('id' => _eventbrite_sboc_event_id());
 //  Should ideally be synchronized with the constant EVENTBRITE_SBOC_REGISTRATION_LOW_DATE  
-   $attendee_list_params = array('modified_after' => _eventbrite_sboc_get_timestamp('-1 day'),); 
+   $offset_days = ((!empty($_SESSION['pending_list_time_span'])) ? $_SESSION['pending_list_time_span'] : 1);
+   $offset_days *= -1;
+   $attendee_list_params = array('modified_after' => _eventbrite_sboc_get_timestamp("{$offset_days} day"),); 
    $eb_client = NULL;
    
    $auth_key = array();
