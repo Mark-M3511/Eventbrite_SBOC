@@ -360,6 +360,8 @@ function _eventbrite_sboc_email_auto_sender($data){
  
  function _eventbrite_sboc_sort_attendees_by_create_date($a, $b){
    $tz_name = _eventbrite_sboc_get_timezone_by_index(variable_get('eventbrite_event_registrations_tz', 0));
+   $_a = new StdClass;
+   $_b = new StdClass;
    $_a->created = _eventbrite_sboc_get_date_in_tz($a->attendee->created, $tz_name);
    $_b->created = _eventbrite_sboc_get_date_in_tz($b->attendee->created, $tz_name);
    $sort = variable_get('eventbrite_sboc_app_data_sort_order', EVENTBRITE_SBOC_LIST_SORT_ORDER);
