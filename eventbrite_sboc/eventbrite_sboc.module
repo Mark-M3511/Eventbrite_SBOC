@@ -263,8 +263,8 @@ function _eventbrite_sboc_email_auto_sender($data){
  } 
  
  function _eventbrite_sboc_email_distribution_queue(){
-//     $data->email = variable_get('site_mail', _eventbrite_sboc_api_user_email()); 
-    $alt_email = variable_get('site_mail', _eventbrite_sboc_api_user_email());  
+    $alt_email = variable_get('site_mail', _eventbrite_sboc_api_user_email()); 
+    $data = new StdClass; 
 	$data->email = variable_get('eventbrite_sboc_email_return_address', $alt_email);
     if (variable_get('eventbrite_sboc_email_send_option','test') == 'live'){
        $data->email = '';
