@@ -567,7 +567,8 @@ function _eventbrite_sboc_email_auto_sender($data){
    $result = ($result && !$attendee_in_db);
 //    $email_pending = (int)_eventbrite_sboc_email_to_attendee_pending($_SESSION['attendees_in_db'], $attendee->attendee->id);
 //    $result = ($result && $email_pending);
-   $result = ($result && ($attendee->attendee->order_type == EVENTBRITE_SBOC_ORDER_STATUS_PP_COMPLETED || $attendee->attendee->order_type == EVENTBRITE_SBOC_ORDER_STATUS_FREE_ORDER));
+// Too restrictive...there are multiple possible values. By default the attendee records retrieved are for persons attending
+//    $result = ($result && ($attendee->attendee->order_type == EVENTBRITE_SBOC_ORDER_STATUS_PP_COMPLETED || $attendee->attendee->order_type == EVENTBRITE_SBOC_ORDER_STATUS_FREE_ORDER));
    
    error_log("\$create_date => $create_date");
    error_log("\$attendee_in_db => $attendee_in_db");
