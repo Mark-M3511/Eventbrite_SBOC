@@ -97,7 +97,7 @@
 	/********************************Administrative links below***********************************/
 	
     $items['admin/config/system/eventbrite_sboc'] = array(
-	   'title' => 'Configure Eventbrite for SBOC',
+	   'title' => 'Eventbrite for SBOC',
 	   'description' => 'Enter Eventbrite API credentials and manage service preferences',
 	   'page callback' => '_eventbrite_sboc_build_config_forms',
 	   'access arguments' => array('administer ebsboc'),
