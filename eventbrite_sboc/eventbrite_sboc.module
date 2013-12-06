@@ -482,16 +482,14 @@ function _eventbrite_sboc_email_auto_sender($data){
 	  drupal_set_message(t('Using UID/Password combination'));
    }
    
-//    $eb_attendee_list = $eb_client->event_list_attendees($event_id);
    $event_params = array_merge($event_id, $attendee_list_params);
    $eb_attendee_list = new StdClass;
    try{
    	 $eb_attendee_list = $eb_client->event_list_attendees($event_params); 	
      usort($eb_attendee_list->attendees, '_eventbrite_sboc_sort_attendees_by_create_date');
-//      _eventbrite_sboc_cache_attendee_list($eb_attendee_list->attendees);  
    }catch(Exception $e){
-       watchdog(EVENTBRITE_SBOC_MODULE_NAME, t($e->getMessage()), array(), WATCHDOG_NOTICE);
        $eb_attendee_list->attendees = array();
+       watchdog(EVENTBRITE_SBOC_MODULE_NAME, t($e->getMessage()), array(), WATCHDOG_NOTICE);
    } 
    
    _eventbrite_sboc_cache_attendee_list($eb_attendee_list->attendees);   
@@ -508,10 +506,18 @@ function _eventbrite_sboc_email_auto_sender($data){
 	
    _eventbrite_sboc_debug('_eventbrite_sboc_debug_lists', $params); 
    
+   $num_attendees = 0;
+   try{
+      $num_attendees = $eb_client->event_get($event_id)->event->num_attendee_rows;   
+   }catch(Exception $e){
+      watchdog_exception(EVENTBRITE_SBOC_MODULE_NAME, $e);
+   }
+   
+   
    $attendee_list = _eventbrite_sboc_display_pending_list($_SESSION['attendees']);
    $params = array(
       'attendee_list' => $attendee_list, 
-	  'attendee_list_count' => count($eb_attendee_list->attendees),
+	  'attendee_list_count' => (!empty($num_attendees) ? $num_attendees : 'N/A'),
     );
    
    return theme('attendee_list', $params);
@@ -826,8 +832,8 @@ function _eventbrite_sboc_email_auto_sender($data){
        {   			
 	      $langcode = $message['language']->language;
 	      $message['subject'] = check_plain($params['subject']);		
-// 	      $message['body'][] = filter_xss($params['message_body']);
-		  $message['body'][] = $params['message_body'];
+// 		  $message['body'][] = $params['message_body'];
+		  $message['body'][] = check_markup($params['message_body'], 'full_html', $langcode, FALSE);
 	  	  if (!empty($params['attachment'])){
 	     	 $attachment = array(
 		   		'filecontent' => file_get_contents($params['attachment']),	
@@ -855,13 +861,13 @@ function _eventbrite_sboc_email_auto_sender($data){
    $_SESSION['attendees_to_db'] = array();
    foreach($attendees as $a){  
      $replacements = array(
-	 '@first_name' => $a->first_name, 
-	 '@last_name' => $a->last_name,
-     '@category_name' => $a->category_name, 
-	 '@extra_message_1' => $a->extra_message_1,
-	 '@registration_type' => $a->registration_type,
-	 '@child_first_name' => $a->child_first_name,
-	 '@child_last_name' => $a->child_last_name,
+	    '@first_name' => $a->first_name, 
+	    '@last_name' => $a->last_name,
+        '@category_name' => $a->category_name, 
+	    '@extra_message_1' => $a->extra_message_1,
+	    '@registration_type' => $a->registration_type,
+	    '@child_first_name' => $a->child_first_name,
+	    '@child_last_name' => $a->child_last_name,
 	 );   
      $message_body = format_string($content, $replacements);	
 	 $to = (empty($email) ? $a->email : $email);	 
