@@ -1,16 +1,23 @@
+;Header Info
 name = Eventbrite SBOC
 description = Manage SBOC events on Eventbrite
 package = Eventbrite SBOC
 core = 7.x
+
+;Configuration Page
 configure = admin/config/system/eventbrite_sboc
-;include Eventbrite class file
+
+;Includes
 files[] = includes/Eventbrite.php
 files[] = includes/eventbrite_sboc_helpers.inc
 files[] = test/eventbrite_sboc.test
-;dependencies - other projects that are required to make this one work
+
+;Dependencies - other projects that are required to make this one work
 dependencies[] = mailsystem
 dependencies[] = mimemail
-;stylesheets
+
+;Stylesheets
 stylesheets[all][] = css/eventbrite_sboc_style.css
-;version info
-version = '7.x-1.1-dev'
+
+;Version Info
+version = '7.x-1.2-dev'

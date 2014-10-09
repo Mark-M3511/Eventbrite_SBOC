@@ -155,54 +155,246 @@ function eventbrite_sboc_schema(){
    return $msg;
  }
  
+ /**
+ * Eventbrite SBOC update #3
+ * Add new indexes to table 'eventbrite_sboc_attendees'
+ * Updated: 2013-12-25
+ */
+ function eventbrite_sboc_update_7102(){ 
+   $msg = 'New indexes added to table \'eventbrite_sboc_attendees\'';
+   
+   $init_val = 'Unspecified';
+   $table_name = 'eventbrite_sboc_attendees';
+   
+   db_add_index($table_name, $table_name. '_email_address', array('email_address',));
+   
+   return $msg;
+ }
+ 
+ /**
+ * Eventbrite SBOC update #4
+ * Add new columns to table 'eventbrite_sboc_attendees'
+ * Updated: 2014-09-25
+ */
+ function eventbrite_sboc_update_7103(){ 
+   
+   $init_val = 'N/A';
+   $table_name = 'eventbrite_sboc_attendees';
+   $msg = "13 new columns added to table '{$table_name}'";
+   
+   $schema_1 = array(
+	   'description' => 'Contestant\'s gender -- allowed values M/F', 
+       'type' => 'varchar',  
+       'length' => 2,        
+       'not null' => FALSE,
+	);
+	
+	$schema_2 = array(
+	   'description' => 'Contestant\'s school', 
+       'type' => 'varchar',  
+       'length' => 255,        
+       'not null' => FALSE,
+	);
+	
+	$schema_3 = array(
+	   'description' => 'Contestant\'s Year Of Birth', 
+       'type' => 'int',  
+       'unsigned' => TRUE,        
+       'not null' => TRUE,
+	   'default' => 0,
+	   'initial' => 0,
+	);
+	
+	$schema_4 = array(
+	   'description' => 'Contestant\'s Month Of Birth', 
+       'type' => 'int',  
+       'unsigned' => TRUE,        
+       'not null' => TRUE,
+	   'default' => 0,
+	   'initial' => 0,
+	);
+	
+	$schema_5 = array(
+	   'description' => 'Contestant\'s Day Of Birth', 
+       'type' => 'int',  
+       'unsigned' => TRUE,        
+       'not null' => TRUE,
+	   'default' => 0,
+	   'initial' => 0,
+	);
+	
+	$schema_6 = array(
+	   'description' => 'Contestant\'s Home Address Line 1', 
+	   'type' => 'varchar',  
+       'length' => 255,        
+       'not null' => FALSE,
+	);
+	
+	$schema_7 = array(
+	   'description' => 'Contestant\'s Home Address Line 2', 
+	   'type' => 'varchar',  
+       'length' => 255,        
+       'not null' => FALSE,
+	);
+	
+	$schema_8 = array(
+	   'description' => 'Contestant\'s Home City', 
+	   'type' => 'varchar',  
+       'length' => 100,        
+       'not null' => FALSE,
+	);
+
+	$schema_9 = array(
+	   'description' => 'Contestant\'s Home Province or State - default: \'ON\' = Ontario', 	
+	   'type' => 'varchar',  
+       'length' => 3,        
+       'not null' => FALSE,
+       'initial' => 'ON',
+	);
+
+	$schema_10 = array(
+	   'description' => 'Contestant\'s Home Postal or Zip Code', 
+	   'type' => 'varchar',  
+       'length' => 20,        
+       'not null' => FALSE,
+	);
+	
+	$schema_11 = array(
+	   'description' => 'Contestant\'s Home Phone 1', 	
+	   'type' => 'varchar',  
+       'length' => 20,        
+       'not null' => FALSE,
+	);
+	
+	$schema_12 = array(
+	   'description' => 'Contestant\'s Home Phone 2, Mobile, Business', 	
+	   'type' => 'varchar',  
+       'length' => 20,        
+       'not null' => FALSE,
+	);
+	
+	$schema_13 = array(
+	   'description' => 'Additional Notes', 	
+	   'type' => 'text',  
+       'length' => 2500,        
+       'not null' => FALSE,
+	);
+	
+	$schema_14 = array(
+	   'description' => 'Contestant\'s Grade', 	
+	   'type' => 'varchar',  
+       'length' => 3,        
+       'not null' => FALSE,
+	);
+	
+   
+   /* $keys_new = array(
+      'indexes' => array(
+	     'eventbrite_sboc_attendees_reg_type' => array('reg_type'),
+		 'eventbrite_sboc_attendees_region' => array('region'),
+      ),
+   ); */
+   
+   db_add_field($table_name, 'gender', $schema_1);
+   db_add_field($table_name, 'grade', $schema_14);
+   db_add_field($table_name, 'school', $schema_2);
+   db_add_field($table_name, 'year_of_birth', $schema_3);
+   db_add_field($table_name, 'month_of_birth', $schema_4);
+   db_add_field($table_name, 'day_of_birth', $schema_5);
+   db_add_field($table_name, 'home_address_line_1', $schema_6);
+   db_add_field($table_name, 'home_address_line_2', $schema_7);
+   db_add_field($table_name, 'home_city', $schema_8);
+   db_add_field($table_name, 'home_prov_state', $schema_9);
+   db_add_field($table_name, 'home_postal_zip', $schema_10);
+   db_add_field($table_name, 'home_phone_1', $schema_11);
+   db_add_field($table_name, 'home_phone_2', $schema_12);
+   db_add_field($table_name, 'additional_info', $schema_13);
+    
+   return $msg;
+ }
+ 
+  /**
+ * Eventbrite SBOC update #5
+ * Add new columns to table 'eventbrite_sboc_attendees'
+ * Updated: 2014-10-09
+ */
+ function eventbrite_sboc_update_7104(){ 
+   
+   $init_val = 'N/A';
+   $table_name = 'eventbrite_sboc_attendees';
+   $msg = "1 new columns added to table '{$table_name}'";
+   
+   $schema_1 = array(
+	   'description' => 'Date and time attendee record was updated in this table.',          
+        'type' => 'datetime',
+        'mysql_type' => 'DATETIME',
+        'pgsql_type' => 'timestamp without time zone', 
+        'sqlite_type' => 'VARCHAR', 
+        'sqlsrv_type' => 'smalldatetime',		   
+        'not null' => FALSE,
+	);
+	
+   $keys_new = array(
+      'indexes' => array(
+	     'eventbrite_sboc_attendees_change_date' => array('change_date'),
+      ),
+   );
+   
+   $schema_2 = array(
+	  'description' => 'Flag indicating consent to be contacted',            
+      'type' => 'int',             		   
+      'not null' => TRUE,
+	  'default' => 1,
+   );
+
+//    db_add_field($table_name, 'change_date', $schema_1, $keys_new);
+   db_add_field($table_name, 'change_date', $schema_1);	
+//    db_add_field($table_name, 'contact_opt_in', $schema_2);	
+   
+   return $msg;
+   
+  } 
+  
+  
+  /**
+ * Eventbrite SBOC update #6
+ * Update 'change_date' column in table 'eventbrite_sboc_attendees'
+ * Updated: 2014-10-09
+ */
+ function eventbrite_sboc_update_7105(){ 
+    $init_val = 'N/A';
+   	$table_name = 'eventbrite_sboc_attendees';
+    $msg = "Update change_date column in table '{$table_name}'";
+    
+    db_update($table_name)
+	->expression('change_date', 'create_date')
+	->execute();
+    
+    return $msg;
+ }
+ 
+ /**
+ * Eventbrite SBOC update #7
+ * Add new indexes to table 'eventbrite_sboc_attendees'
+ * Updated: 2014-10-09
+ */
+ function eventbrite_sboc_update_7106(){    
+   
+   $init_val = 'Unspecified';
+   $table_name = 'eventbrite_sboc_attendees';
+   $msg = "New indexes added to table {$table_name}";
+   
+   db_add_index($table_name, $table_name. '_change_date', array('change_date',));
+   db_add_index($table_name, $table_name. '_create_date', array('create_date',));   
+   
+   return $msg;
+ }
+ 
 /**
  * Implementation of hook_uninstall().
  */
-/* function gmap_uninstall() {
- variable_del('gmap_method');
-} */
-
-/**
- * Updates from 5.x-1.0alpha1 to 5.x-1.0.
- * Do some tidying up of the settings.
- */
-/* function gmap_update_5000() {
-  $ret = array();
-
-  $d = variable_get('gmap_default', array());
-
-  // Add the previous implicit baselayers back in.
-  if (!isset($d['baselayers'])) {
-    $d['baselayers'] = array(
-      // Default map type
-      'maptype' => isset($d['maptype']) ? $d['maptype'] : 'Map',
-      'Map' => 1,
-      'Satellite' => 1,
-      'Hybrid' => 1,
-      'Physical' => 0,
-    );
-  }
-
-  // Default maptype was moved into baselayers.
-  unset($d['maptype']);
-
-  // Determine the map type control that was in use.
-  if (!isset($d['mtc'])) {
-    // User had the notype behavior flag set.
-    if (!empty($d['behavior']['notype'])) {
-      $d['mtc'] = 'none';
-    }
-    else {
-      $d['mtc'] = 'standard';
-    }
-  }
-
-  // notype is gone, mtc is more generic.
-  if (isset($d['behavior']['notype'])) {
-    unset($d['behavior']['notype']);
-  }
-
-  variable_set('gmap_default', $d);
-  return $ret;
-} */
-
+/* 
+function gmap_uninstall() {
+  variable_del('gmap_method');
+} 
+*/
