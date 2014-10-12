@@ -339,17 +339,9 @@ function eventbrite_sboc_schema(){
 	     'eventbrite_sboc_attendees_change_date' => array('change_date'),
       ),
    );
-   
-   $schema_2 = array(
-	  'description' => 'Flag indicating consent to be contacted',            
-      'type' => 'int',             		   
-      'not null' => TRUE,
-	  'default' => 1,
-   );
 
 //    db_add_field($table_name, 'change_date', $schema_1, $keys_new);
    db_add_field($table_name, 'change_date', $schema_1);	
-//    db_add_field($table_name, 'contact_opt_in', $schema_2);	
    
    return $msg;
    
@@ -390,11 +382,68 @@ function eventbrite_sboc_schema(){
    return $msg;
  }
  
+ /**
+ * Eventbrite SBOC update #8
+ * Add new columns to table 'eventbrite_sboc_attendees'
+ * Updated: 2014-10-12
+ */
+
+ function eventbrite_sboc_update_7107(){    
+   
+   $init_val = 'Unspecified';
+   $table_name = 'eventbrite_sboc_attendees';
+   $msg = "New columns added to table {$table_name}";
+   
+   $schema_1 = array(
+	  'description' => 'Contestant\'s lastname', 
+      'type' => 'varchar',  
+      'length' => 50,        
+      'not null' => FALSE,
+   );
+   
+   $schema_2 = array(
+	  'description' => 'Contestant\'s firstname', 
+      'type' => 'varchar',  
+      'length' => 50,        
+      'not null' => FALSE,
+   );
+
+   db_add_field($table_name, 'contestant_last_name', $schema_1);	   
+   db_add_field($table_name, 'contestant_first_name', $schema_2);	   
+   
+   return $msg;
+ }
+
+ 
+ /**
+ * Eventbrite SBOC update #9
+ * Add new columns to table 'eventbrite_sboc_attendees'
+ * Updated: 2014-10-??
+ */
+ /*
+ function eventbrite_sboc_update_7108(){    
+   
+   $init_val = 'Unspecified';
+   $table_name = 'eventbrite_sboc_attendees';
+   $msg = "New columns added to table {$table_name}";
+   
+   $schema_1 = array(
+	  'description' => 'Flag indicating consent to be contacted',            
+      'type' => 'int',             		   
+      'not null' => TRUE,
+	  'default' => 1,
+   );
+
+   db_add_field($table_name, 'contact_opt_in', $schema_1);	   
+   
+   return $msg;
+ }
+ */
+ 
 /**
  * Implementation of hook_uninstall().
  */
-/* 
-function gmap_uninstall() {
-  variable_del('gmap_method');
+
+function eventbrite_sboc_uninstall() {
+   // variable_del('gmap_method');
 } 
-*/
