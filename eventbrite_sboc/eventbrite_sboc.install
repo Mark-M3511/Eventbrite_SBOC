@@ -420,7 +420,6 @@ function eventbrite_sboc_schema(){
  * Add new columns to table 'eventbrite_sboc_attendees'
  * Updated: 2014-10-??
  */
- /*
  function eventbrite_sboc_update_7108(){    
    
    $init_val = 'Unspecified';
@@ -428,17 +427,16 @@ function eventbrite_sboc_schema(){
    $msg = "New columns added to table {$table_name}";
    
    $schema_1 = array(
-	  'description' => 'Flag indicating consent to be contacted',            
+	  'description' => 'Flag indicating consent to be contacted by email',            
       'type' => 'int',             		   
       'not null' => TRUE,
 	  'default' => 1,
    );
 
-   db_add_field($table_name, 'contact_opt_in', $schema_1);	   
+   db_add_field($table_name, 'email_consent', $schema_1);	   
    
    return $msg;
  }
- */
  
 /**
  * Implementation of hook_uninstall().

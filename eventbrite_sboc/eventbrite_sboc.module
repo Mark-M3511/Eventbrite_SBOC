@@ -30,7 +30,11 @@
  define('EVENTBRITE_SBOC_QUESTION_ID_ADDR_POSTAL_ZIP', "Contestant's Postal Code");  
  define('EVENTBRITE_SBOC_QUESTION_ID_PHONE_1', "Contestant's Phone Number");   
  define('EVENTBRITE_SBOC_QUESTION_ID_PHONE_2', "Contestant's Phone Number 2");   
- define('EVENTBRITE_SBOC_QUESTION_ID_ADDTL_INFO', "Additional information for SBOC");    
+ define('EVENTBRITE_SBOC_QUESTION_ID_ADDTL_INFO', "Additional information for SBOC");  
+ // Email
+ define('EVENTBRITE_SBOC_QUESTION_ID_EMAIL_CONSENT', 'I consent to receiving email communications from SBOC');  
+ define('EVENTBRITE_SBOC_EMAIL_COUNT', 'email_count');
+ define('EVENTBRITE_SBOC_EMAIL_SUBJECT_DEFAULT', 'Registration Welcome');
  /* eof: Question Id's */
  define('EVENTBRITE_SBOC_REGISTRATION_AMT_STD', 28);
  define('EVENTBRITE_SBOC_REGISTRATION_LOW_DATE', _eventbrite_sboc_get_date('-1 day')); 
@@ -271,8 +275,20 @@ function _eventbrite_sboc_email_auto_sender($data){
        _eventbrite_sboc_get_pending_list();
 	   _eventbrite_sboc_process_emails($data->email);
    }
+   _eventbrite_sboc_clear_session_data();
 //    error_log("Inside ". __FUNCTION__);
 }
+ 
+/**
+ * Function eventbrite_sboc_cronapi
+ * @param 
+ *	 None
+ * @return 
+ *	 None
+ */
+ function _eventbrite_sboc_clear_session_data(){
+ 	$_SESSION = array();
+ }
   
  /**
  * Function eventbrite_sboc_cronapi
@@ -287,13 +303,13 @@ function _eventbrite_sboc_email_auto_sender($data){
     switch($op) {
       case 'list':
         return array(
-          EVENTBRITE_SBOC_CRON_QUEUE_EMAIL_DISTRIBUTION => 'Eventbrite-SBOC attendee processing and email delivery',
+          EVENTBRITE_SBOC_CRON_QUEUE_EMAIL_DISTRIBUTION => 'Eventbrite-SBOC | Process attendee records and send emails',
         );
       break;
       case 'rule':
         switch($job) {
           case EVENTBRITE_SBOC_CRON_QUEUE_EMAIL_DISTRIBUTION: 
-		    return '*/5 * * * *';
+		    return '*/5 * * * *'; // every 5 minutes by default
         };
       break; 
       case 'execute':
@@ -333,9 +349,12 @@ function _eventbrite_sboc_email_auto_sender($data){
  */
  function _eventbrite_sboc_kick_service($email=''){    
     _eventbrite_sboc_get_pending_list();
-	_eventbrite_sboc_process_emails($email);	
+	_eventbrite_sboc_process_emails($email, EVENTBRITE_SBOC_ATTENDEES_NEW);	
 	_eventbrite_sboc_process_emails($email, EVENTBRITE_SBOC_ATTENDEES_CHANGED);	
+	
  	$output =  _eventbrite_sboc_process_complete_page();
+ 	
+ 	_eventbrite_sboc_clear_session_data();
  	
  	return $output;
  }
@@ -364,8 +383,12 @@ function _eventbrite_sboc_email_auto_sender($data){
  function theme_process_complete($variables){
   
    $msg = $variables['msg'];
+   $count_new = count($_SESSION[EVENTBRITE_SBOC_ATTENDEES_NEW]);
+   $count_changed = count($_SESSION[EVENTBRITE_SBOC_ATTENDEES_CHANGED]);
+   $email_count =  $_SESSION[EVENTBRITE_SBOC_EMAIL_COUNT];
 
-   $output = drupal_render(drupal_get_form('_eventbrite_sboc_process_complete', $msg));	
+   $output = drupal_render(drupal_get_form('_eventbrite_sboc_process_complete', $msg, 
+   			$count_new, $count_changed, $email_count));	
    
    return $output;
  }
@@ -375,8 +398,25 @@ function _eventbrite_sboc_email_auto_sender($data){
 	$form['eventbrite_sboc_process_complete'] = array(
 		'#type' => 'fieldset',
 		'#title' => t('Process Complete'),
-// 		'#description' => t('The operation is completed. You may return to the main configuration page.'),
 		'#description' => t(check_plain($form_state['build_info']['args'][0])),
+	);
+	
+	$form['eventbrite_sboc_process_complete']['eventbrite_sboc_process_complete_count_new'] = array(
+		'#prefix' => '<p>',
+		 '#markup' => format_string('New records processd: @count', array('@count' => $form_state['build_info']['args'][1],)),
+		 '#suffix' => '</p>',
+	);
+	
+	$form['eventbrite_sboc_process_complete']['eventbrite_sboc_process_complete_count_changed'] = array(
+		'#prefix' => '<p>',
+		 '#markup' => format_string('Changed records processd: @count', array('@count' => $form_state['build_info']['args'][2],)),
+		 '#suffix' => '</p>',
+	);
+	
+	$form['eventbrite_sboc_process_complete']['eventbrite_sboc_process_complete_count_email'] = array(
+		'#prefix' => '<p>',
+		'#markup' => format_string('Emails processd: @count', array('@count' => $form_state['build_info']['args'][3],)),
+		'#suffix' => '</p>',
 	);
 	
 	$form['eventbrite_sboc_process_complete']['eventbrite_sboc_process_complete_submit'] = array(
@@ -384,6 +424,7 @@ function _eventbrite_sboc_email_auto_sender($data){
 		'#value' => t('Return'),	
 		'#submit' => array('_eventbrite_sboc_main_config_page'),
 	);
+	
 	
 // 	dpm($form_state['build_info']['args']);
 	
@@ -959,6 +1000,9 @@ function _eventbrite_sboc_pending_list_form($form, &$form_state){
 	  $newAttendee->ans_id = _eventbrite_sboc_answer_id($a->attendee->answers, EVENTBRITE_SBOC_QUESTION_ID_ADDTL_INFO);
 	  $newAttendee->additional_info = _eventbrite_sboc_answer_text($a, $newAttendee->ans_id);
 	  
+	  $newAttendee->ans_id = _eventbrite_sboc_answer_id($a->attendee->answers, EVENTBRITE_SBOC_QUESTION_ID_EMAIL_CONSENT);
+	  $newAttendee->email_consent = _eventbrite_sboc_answer_text($a, $newAttendee->ans_id);
+	  
 	  if (_eventbrite_sboc_new_attendee($_SESSION[EVENTBRITE_SBOC_ATTENDEES_IN_DB], $a)){  	
 	    $_SESSION[EVENTBRITE_SBOC_ATTENDEES_NEW][] = $newAttendee;	
         $pending_ctr++;		
@@ -985,6 +1029,7 @@ function _eventbrite_sboc_pending_list_form($form, &$form_state){
  *	 Flag indicating record does or does not exists
  */
  function _eventbrite_sboc_new_attendee($rows, $attendee){
+/*
    $found = FALSE;
    foreach($rows as $id => $row){
       if ($id == $attendee->attendee->id){
@@ -992,7 +1037,13 @@ function _eventbrite_sboc_pending_list_form($form, &$form_state){
       	 break;
       }
    }
-   return (!$found);
+*/
+   
+   /**/
+   $found = array_key_exists($attendee->attendee->id, $rows);
+   /**/
+   
+   return (!$found);      
  }
  
  /**
@@ -1032,6 +1083,7 @@ function _eventbrite_sboc_pending_list_form($form, &$form_state){
  }
  
  /**
+ * @Database
  * Function _eventbrite_sboc_get_attendees_from_db
  *   Retrieves attendee records from database
  * @param
@@ -1043,12 +1095,13 @@ function _eventbrite_sboc_pending_list_form($form, &$form_state){
    $result = NULL;	
    $low_date = _eventbrite_sboc_get_low_date();
    $upper_limit = variable_get('eventbrite_sboc_email_send_limit', EVENTBRITE_SBOC_EMAIL_SEND_LIMIT);
-   $where = '(e.event_id = \''. _eventbrite_sboc_event_id();
-   $where .= '\') AND (DATE_FORMAT(e.create_date,\'%Y-%m-%d\') >= \''. $low_date. '\')';
+   $event_id = _eventbrite_sboc_event_id();
+   $where = "(e.event_id = '{$event_id}')";
+   $where .= " AND (DATE_FORMAT(e.create_date,'%Y-%m-%d') >= '{$low_date}')";
    try {
    		$query = db_select('eventbrite_sboc_attendees', 'e')  
-   			->where($where)
 	   		->fields('e', array('event_id', 'attendee_id', 'order_id', 'email_address', 'email_sent', 'email_send_date',))   
+	   		->where($where)
    			->orderBy('attendee_id', variable_get('eventbrite_sboc_app_data_sort_order', EVENTBRITE_SBOC_LIST_SORT_ORDER))
 	   		 ->range(0, $upper_limit * 2);
 	   		_eventbrite_sboc_debug('_eventbrite_sboc_display_sql', array('query' => $query));
@@ -1060,6 +1113,7 @@ function _eventbrite_sboc_pending_list_form($form, &$form_state){
  }  
  
  /**
+ * @Database 
  * Function _eventbrite_sboc_get_attendees_in_db
  *   Retrieves attendee records from database
  * @param Array attendees
@@ -1104,6 +1158,7 @@ function _eventbrite_sboc_pending_list_form($form, &$form_state){
  }  
  
  /**
+ * @Database
  * Function _eventbrite_sboc_get_attendees_from_db_paged
  *   Retreives order set of attendee records from db and configures result set for paginated tabular display
  * @param String start_date
@@ -1119,8 +1174,9 @@ function _eventbrite_sboc_pending_list_form($form, &$form_state){
    $end_date = check_plain($end_date);
    $start_date = date('Y-m-d',strtotime($start_date));
    $end_date = date('Y-m-d',strtotime($end_date));
-   $where = '(e.event_id = \''. _eventbrite_sboc_event_id();
-   $where .= '\') AND (DATE_FORMAT(e.create_date,\'%Y-%m-%d\') BETWEEN \''. $start_date . '\' AND \''.$end_date .'\')';
+   $event_id = _eventbrite_sboc_event_id();
+   $where = "(e.event_id = '{$event_id}')";
+   $where .= " AND (DATE_FORMAT(e.create_date,'%Y-%m-%d') BETWEEN  '{$start_date}'  AND '{$end_date}')";
    try {
    		$query = db_select('eventbrite_sboc_attendees', 'e')  
    			->where($where)
@@ -1153,6 +1209,7 @@ function _eventbrite_sboc_pending_list_form($form, &$form_state){
  }
  
  /**
+ * @Database
  * Function _eventbrite_sboc_get_attendees_from_db_paged_count
  *   Returns count of records for paginated display
  * @param String start_date
@@ -1168,8 +1225,11 @@ function _eventbrite_sboc_pending_list_form($form, &$form_state){
    $end_date = check_plain($end_date);
    $start_date = date('Y-m-d',strtotime($start_date));
    $end_date = date('Y-m-d',strtotime($end_date));
-   $where = '(e.event_id = \''. _eventbrite_sboc_event_id();
-   $where .= '\') AND (DATE_FORMAT(e.create_date,\'%Y-%m-%d\') BETWEEN \''. $start_date . '\' AND \''.$end_date .'\')';
+   $event_id = _eventbrite_sboc_event_id();
+//    $where = '(e.event_id = \''. _eventbrite_sboc_event_id();
+//    $where .= '\') AND (DATE_FORMAT(e.create_date,\'%Y-%m-%d\') BETWEEN \''. $start_date . '\' AND \''.$end_date .'\')';
+   $where = "(e.event_id = '{$event_id}')";
+   $where .= " AND (DATE_FORMAT(e.create_date,'%Y-%m-%d') BETWEEN  '{$start_date}'  AND '{$end_date}')";
    try {
    		$result = db_select('eventbrite_sboc_attendees', 'e')  
    			->where($where)
@@ -1205,6 +1265,7 @@ function _eventbrite_sboc_pending_list_form($form, &$form_state){
  }
 
  /**
+ * @Database 
  * Function _eventbrite_sboc_select_max_event_attendee_id
  *   Retreive highest attendee record id for current event
  * @return Integer result
@@ -1227,6 +1288,7 @@ function _eventbrite_sboc_pending_list_form($form, &$form_state){
  }
 
  /**
+ * @Database 
  * Function _eventbrite_sboc_search_saved_attendees
  *   Returns count of records for paginated display
  * @param Array answers
@@ -1305,8 +1367,8 @@ function _eventbrite_sboc_pending_list_form($form, &$form_state){
  *   Sends a single email to a specified address
  * @param String to
  *	 Recipient's email address
- * @param String message_body
- *	 Body of email / Default is empty string
+ * @param Array message_body
+ *	 Array of body text / Default is empty string
  * @param String attachment
  *	 Fully qualified path and filename / Default is empty string
  * @param String attachment_name
@@ -1315,17 +1377,16 @@ function _eventbrite_sboc_pending_list_form($form, &$form_state){
  *	 Attachment MIME TYPE (See http://en.wikipedia.org/wiki/MIME) / Default is empty string
  * @return Boolean result
  *	 Returns boolean value indicating success (TRUE) or failure (FALSE)
+ * @Reference: http://drupal.stackexchange.com/questions/54996/how-to-use-drupal-mail-to-send-emails-with-custom-template
  */
-//  function _eventbrite_sboc_send_email($to, $message_body = '', $attachment='', $attachment_name='',
 function _eventbrite_sboc_send_email($to, $message_body = array(), $attachment='', $attachment_name='',
     $attachment_mime_type = ''){
     $result = FALSE;
     $params = array(); // create parameters array to hold various values for drupal_mail function
     $params['from'] = variable_get('eventbrite_sboc_email_return_address', '');
 	$params['attachment'][] = array('attachment' => $attachment, 'attachment_name' => $attachment_name, 
-		'mime_type' => $attachment_mime_type);
-    $params['subject'] = variable_get('eventbrite_sboc_file_node_title', variable_get('site_name', '(No Subject)'));
-// 	$params['message_body'][] = $message_body;
+		'mime_type' => $attachment_mime_type); //eventbrite_sboc_content_title
+	$params['subject'] = variable_get('eventbrite_sboc_content_title', variable_get('site_name', EVENTBRITE_SBOC_EMAIL_SUBJECT_DEFAULT));
 	$params['message_body'] = $message_body;
 	$message_result = array();
     try {
@@ -1415,6 +1476,7 @@ function _eventbrite_sboc_send_email($to, $message_body = array(), $attachment='
 	    '@registration_type' => $a->registration_type,
 	    '@child_first_name' => $a->child_first_name,
 	    '@child_last_name' => $a->child_last_name,
+	    '@region' => $a->region,
 	 );   
     
      $message_body = array();
@@ -1451,6 +1513,8 @@ function _eventbrite_sboc_send_email($to, $message_body = array(), $attachment='
    
    }   // -- End foreach
    
+   $_SESSION[EVENTBRITE_SBOC_EMAIL_COUNT] = $email_count;
+   
    if (!empty($attendees)){
    	  switch ($dataset_type) {
      	case EVENTBRITE_SBOC_ATTENDEES_NEW:
@@ -1479,6 +1543,7 @@ function _eventbrite_sboc_send_email($to, $message_body = array(), $attachment='
  }
  
  /**
+ * @Database
  * Function _eventbrite_sboc_cache_attendee_records_to_db
  *   Sends an email to each attendee
  * @param Boolean reset
@@ -1532,6 +1597,7 @@ function _eventbrite_sboc_send_email($to, $message_body = array(), $attachment='
 	 	'additional_info' => $a->additional_info,
 	 	'contestant_last_name' => $a->child_last_name,
 	 	'contestant_first_name' => $a->child_first_name,
+	 	'email_consent' => (drupal_strtoupper($a->email_consent) == 'YES' ? 1 : 0),
 	);  
  }
  
@@ -1606,6 +1672,7 @@ function _eventbrite_sboc_get_change_date_from_db($rows, $a){
  }
  
  /**
+ * @Database 
  * Function _eventbrite_sboc_message_body
  *   Updates attendee records with changed information
  * @param Array rows
@@ -1645,7 +1712,9 @@ function _eventbrite_sboc_get_change_date_from_db($rows, $a){
 	 			'home_phone_2' => $row['home_phone_2'],
 	 			'additional_info' => $row['additional_info'],
 	 			'contestant_last_name' => $row['contestant_last_name'],
-	 			'contestant_first_name' => $row['contestant_first_name'],));	  
+	 			'contestant_first_name' => $row['contestant_first_name'],
+	 			'email_consent' => $row['email_consent'],
+	 			));	  
 	 		$query->condition('attendee_id', $row['attendee_id'], '=');		
 			$query->condition('event_id', $event_id, '=');				
 			$query->condition('change_date', $row['change_date'], '<');
@@ -1659,6 +1728,7 @@ function _eventbrite_sboc_get_change_date_from_db($rows, $a){
 
 
 /**
+ * @Database
  * Function _eventbrite_sboc_insert_attendees_to_db
  *   Insert attendee records in a batch to database
  * @param Array rows
@@ -1699,7 +1769,9 @@ function _eventbrite_sboc_get_change_date_from_db($rows, $a){
 	 			'home_phone_2',
 	 			'additional_info',
 	 			'contestant_last_name',
-	 			'contestant_first_name',));
+	 			'contestant_first_name',
+	 			'email_consent',
+	 			));
 	  
 		foreach($rows as $row){
 	  		$query->values($row); 
@@ -1712,6 +1784,7 @@ function _eventbrite_sboc_get_change_date_from_db($rows, $a){
  }
  
  /**
+ * @Database 
  * Function _eventbrite_sboc_insert_attendee_to_db
  *   Insert a single attendee record to database
  * @param Array rows
@@ -1754,6 +1827,7 @@ function _eventbrite_sboc_get_change_date_from_db($rows, $a){
 			 		'additional_info' => $attendee->additional_info,
 			 		'contestant_last_name' => $attendee->child_last_name,
 			 		'contestant_first_name' => $attendee->child_first_name,
+			 		'email_consent' => ($a->email_consent == 'Yes' ? 1 : 0),
 			  ))
   			  ->execute();
   	}catch(Exception $e){
