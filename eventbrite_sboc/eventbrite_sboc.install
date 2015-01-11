@@ -438,6 +438,30 @@ function eventbrite_sboc_schema(){
    return $msg;
  }
  
+ /**
+ * Eventbrite SBOC update #7109
+ * Add new column(s) to table 'eventbrite_sboc_attendees'
+ * Updated: 2015-01-10
+ */
+ function eventbrite_sboc_update_7109(){    
+   
+   $init_val = 0;
+   $table_name = 'eventbrite_sboc_attendees';
+   $msg = "Added new column(s) to table '{$table_name}': 'ticket_id'";
+   
+   $schema_1 = array(
+	  'description' => 'Unique identifier for Eventbrite ticket type',            
+      'type' => 'int',             		   
+      'not null' => TRUE,
+	  'default' => $init_val,
+   );
+
+   db_add_field($table_name, 'ticket_id', $schema_1);	   
+   
+   return $msg;
+ }
+ 
+ 
 /**
  * Implementation of hook_uninstall().
  */

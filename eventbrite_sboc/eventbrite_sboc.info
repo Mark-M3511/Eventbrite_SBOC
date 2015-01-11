@@ -8,8 +8,8 @@ core = 7.x
 configure = admin/config/system/eventbrite_sboc
 
 ;Includes
-files[] = includes/Eventbrite.php
-files[] = includes/eventbrite_sboc_helpers.inc
+;files[] = includes/Eventbrite.php
+files[] = eb/Eventbrite.php
 files[] = test/eventbrite_sboc.test
 
 ;Dependencies - other projects that are required to make this one work
@@ -20,4 +20,4 @@ dependencies[] = mimemail
 stylesheets[all][] = css/eventbrite_sboc_style.css
 
 ;Version Info
-version = '7.x-1.2-dev'
+version = '7.x-1.15-u12'
