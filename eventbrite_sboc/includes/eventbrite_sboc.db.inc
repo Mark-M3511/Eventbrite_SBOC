@@ -265,7 +265,7 @@
 	 	'contestant_last_name' => $a->child_last_name,
 	 	'contestant_first_name' => $a->child_first_name,
 	 	'email_consent' => (drupal_strtoupper($a->email_consent) == 'YES' ? 1 : 0),
-	 	/* 'ticket_id' => $a->ticket_id, */
+	 	'ticket_id' => $a->ticket_id,
 	);  
  }
  
@@ -313,7 +313,7 @@
 	 			'contestant_last_name' => $row['contestant_last_name'],
 	 			'contestant_first_name' => $row['contestant_first_name'],
 	 			'email_consent' => $row['email_consent'],
-	 			/* 'ticket_id' => $row['ticket_id'], */
+	 			'ticket_id' => $row['ticket_id'],
 	 			));	  
 	 		$query->condition('attendee_id', $row['attendee_id'], '=');		
 			$query->condition('event_id', $event_id, '=');				
@@ -371,7 +371,7 @@
 	 			'contestant_last_name',
 	 			'contestant_first_name',
 	 			'email_consent',
-	 			/* ticket_id, */
+	 			'ticket_id',
 	 			));
 	  
 		foreach($rows as $row){
@@ -429,7 +429,7 @@
 			 		'contestant_last_name' => $attendee->child_last_name,
 			 		'contestant_first_name' => $attendee->child_first_name,
 			 		'email_consent' => ($a->email_consent == 'Yes' ? 1 : 0),
-			 		/* 'ticket_id' => $a->ticket_id, */
+			 		'ticket_id' => $a->ticket_id,
 			  ))
   			  ->execute();
   	}catch(Exception $e){
