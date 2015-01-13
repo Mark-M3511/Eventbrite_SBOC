@@ -46,7 +46,8 @@
 	  $newAttendee->ans_id = _eventbrite_sboc_answer_id($a->attendee->answers, EVENTBRITE_SBOC_QUESTION_ID_CATEGORY);
 	  $newAttendee->category = $a->attendee->answers[$newAttendee->ans_id]->answer->answer_text[0];
 	  $newAttendee->category_name = $a->attendee->answers[$newAttendee->ans_id]->answer->answer_text; 
-	  $newAttendee->order_type = $a->attendee->order_type;	 
+// 	  $newAttendee->order_type = $a->attendee->order_type;	
+	  $newAttendee->order_type = _eventbrite_sboc_validate_order_type($a); 	 
       $newAttendee->attachment = _eventbrite_sboc_select_attachment($newAttendee->category);		
 	  $newAttendee->attachment_mime_type = _eventbrite_sboc_mime_type(pathinfo($newAttendee->attachment, PATHINFO_EXTENSION));
 	  $newAttendee->email_sent = 0;
@@ -154,4 +155,22 @@
    $found = array_key_exists($attendee->attendee->id, $rows);
    
    return (!$found);      
+ }
+ 
+ /**
+ * Function _eventbrite_sboc_validate_order_type
+ *   Checks whether the order_type property has been created for the current record
+ * @param Object attendee
+ *  Attendee object
+ * @return String order_type
+ *	 Order_Type value received or Refunded/Canceled
+ */
+ function _eventbrite_sboc_validate_order_type($attendee){
+  
+   $retVal = EVENTBRITE_SBOC_ORDER_TYPE_REFUNDED_CANCELED;
+   if (property_exists($attendee->attendee, 'order_type')) {
+   	  $retVal = $attendee->attendee->order_type;	
+   }
+   
+   return $retVal;      
  }

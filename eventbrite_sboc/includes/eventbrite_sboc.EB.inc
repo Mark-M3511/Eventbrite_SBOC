@@ -25,8 +25,14 @@
    $start_date = _eventbrite_sboc_get_timestamp("{$offset_days} day");
    watchdog(EVENTBRITE_SBOC_MODULE_NAME, 'Offset Days = @od | Start Date = @start_date', 
    		array('@od' =>  abs($offset_days), '@start_date' => $start_date), WATCHDOG_INFO);
+   		
 //    $attendee_list_params = array('modified_after' => _eventbrite_sboc_get_timestamp("{$offset_days} day"),); 
-   $attendee_list_params = array('modified_after' => $start_date,);  	
+//    $attendee_list_params = array('modified_after' => $start_date,);  	
+   $attendee_list_params = array(
+   	'modified_after' => $start_date,
+   	'status' => 'all',
+   );  	
+   
    $eb_client = NULL;
    
    $auth_key = array();

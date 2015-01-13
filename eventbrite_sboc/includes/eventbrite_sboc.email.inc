@@ -112,7 +112,11 @@ function _eventbrite_sboc_email_auto_sender($data){
 		   if ($a->order_type != EVENTBRITE_SBOC_ORDER_STATUS_PP_COMPLETED){
 			  $data_test = ($data_test || ($a->category != $prev_category));
 		   }
-		
+		   
+		   $order_type = drupal_strtoupper($a->order_type);
+		   /* $data_test = ($data_test && strpos($order_type, 'REFUNDED') === FALSE); 
+		   $data_test = ($data_test && strpos($order_type, 'CANCELED') === FALSE); */
+		   $data_test = ($data_test && ($order_type != EVENTBRITE_SBOC_ORDER_TYPE_REFUNDED_CANCELED)); 
 		   $send_mail = ($send_mail && $data_test);
 		}			
 		// Save anyway if $send_mail == FALSE and $record_changed == TRUE

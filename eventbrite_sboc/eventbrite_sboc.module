@@ -35,7 +35,9 @@
  define('EVENTBRITE_SBOC_QUESTION_ID_ADDR_POSTAL_ZIP', "Contestant's Postal Code");  
  define('EVENTBRITE_SBOC_QUESTION_ID_PHONE_1', "Contestant's Phone Number");   
  define('EVENTBRITE_SBOC_QUESTION_ID_PHONE_2', "Contestant's Phone Number 2");   
- define('EVENTBRITE_SBOC_QUESTION_ID_ADDTL_INFO', "Additional information for SBOC");  
+ define('EVENTBRITE_SBOC_QUESTION_ID_ADDTL_INFO', "Additional information for SBOC"); 
+ // Order Status
+ define('EVENTBRITE_SBOC_ORDER_TYPE_REFUNDED_CANCELED', 'RC'); 
  // Email
  define('EVENTBRITE_SBOC_QUESTION_ID_EMAIL_CONSENT', 'I consent to receiving email communications from SBOC');  
  define('EVENTBRITE_SBOC_EMAIL_COUNT', 'email_count');
