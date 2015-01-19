@@ -461,6 +461,22 @@ function eventbrite_sboc_schema(){
    return $msg;
  }
  
+ /**
+ * Eventbrite SBOC update #7110
+ * Add new index(es) to table 'eventbrite_sboc_attendees'
+ * Updated: 2015-01-13
+ */
+ function eventbrite_sboc_update_7110(){    
+   
+   $init_val = 'Unspecified';
+   $table_name = 'eventbrite_sboc_attendees';
+   $msg = "New index(es) added to table {$table_name}";
+   
+   db_add_index($table_name, $table_name. '_ticket_id', array('ticket_id',));
+   
+   return $msg;
+ }
+ 
  
 /**
  * Implementation of hook_uninstall().
