@@ -69,6 +69,7 @@ function _eventbrite_sboc_email_auto_sender($data){
    }		
 
    _eventbrite_sboc_cache_attendee_records_to_db();
+   $db_attendee_rows = $_SESSION[EVENTBRITE_SBOC_ATTENDEES_IN_DB];
    
    foreach($attendees as $a){  
      $replacements = array(
@@ -93,37 +94,35 @@ function _eventbrite_sboc_email_auto_sender($data){
 	 $send_mail = TRUE;
 	 if ($dataset_type == EVENTBRITE_SBOC_ATTENDEES_CHANGED){
 	 	$current_change_date = strtotime($a->changed);
-		$dt = _eventbrite_sboc_get_field_value_from_db($_SESSION[EVENTBRITE_SBOC_ATTENDEES_IN_DB], $a, 'change_date');
+		$db_attendee_row = _eventbrite_sboc_get_cached_record_by_attendee_id($db_attendee_rows, $a);
+		$dt = $db_attendee_row->change_date;
 	 	$prev_change_date = strtotime($dt);
 	 	
 		$record_changed = $send_mail = ($current_change_date > $prev_change_date);
-		$attendees_in_db = &$_SESSION[EVENTBRITE_SBOC_ATTENDEES_IN_DB];
 		
 		if ($record_changed){
 		   $ctr++;
-		   $prev_email = _eventbrite_sboc_get_field_value_from_db($attendees_in_db, $a, 'email_address');
-		   $prev_category = _eventbrite_sboc_get_field_value_from_db($attendees_in_db, $a, 'category');
-		   $prev_notes = _eventbrite_sboc_get_field_value_from_db($attendees_in_db, $a, 'additional_info');
-		   $a->email_sent = _eventbrite_sboc_get_field_value_from_db($attendees_in_db, $a, 'email_sent');
-		   $a->email_send_date = _eventbrite_sboc_get_field_value_from_db($attendees_in_db, $a, 'email_send_date');
-		
-		   $data_test = ($a->email != $prev_email || $a->additional_info != $prev_notes);
+	   
+		   $prev_email =  $db_attendee_row->email_address;
+		   $prev_category = $db_attendee_row->category;
+		   $prev_additional_info = $db_attendee_row->additional_info;
+		   $a->email_sent = $db_attendee_row->email_sent;
+		   $a->email_send_date = $db_attendee_row->email_send_date;		   
+			
+		   $data_test = ($a->email != $prev_email || $a->additional_info != $prev_additional_info);
 		
 		   if ($a->order_type != EVENTBRITE_SBOC_ORDER_STATUS_PP_COMPLETED){
 			  $data_test = ($data_test || ($a->category != $prev_category));
 		   }
 		   
 		   $order_type = drupal_strtoupper($a->order_type);
-		   /* $data_test = ($data_test && strpos($order_type, 'REFUNDED') === FALSE); 
-		   $data_test = ($data_test && strpos($order_type, 'CANCELED') === FALSE); */
 		   $data_test = ($data_test && ($order_type != EVENTBRITE_SBOC_ORDER_TYPE_REFUNDED_CANCELED)); 
 		   $send_mail = ($send_mail && $data_test);
 		}			
 		// Save anyway if $send_mail == FALSE and $record_changed == TRUE
 		if (!$send_mail && $record_changed){
 		   _eventbrite_sboc_cache_attendee_records_to_db(FALSE, $a);
-		   watchdog(EVENTBRITE_SBOC_MODULE_NAME, 
-		   	t('Attendee %id changed. No email sent.'), 
+		   watchdog(EVENTBRITE_SBOC_MODULE_NAME, t('Attendee %id changed. No email sent.'), 
 		   	array('%id' => $a->id), WATCHDOG_INFO);
 		}
 	 } else {
@@ -162,24 +161,25 @@ function _eventbrite_sboc_email_auto_sender($data){
    $_SESSION[$dataset_type_count] = $ctr;
 
    $status = 'UNKNOWN';	
-   switch ($dataset_type) {
-     case EVENTBRITE_SBOC_ATTENDEES_NEW:
-       $status = 'NEW';	
-       if (!empty($_SESSION[EVENTBRITE_SBOC_ATTENDEES_TO_DB])){
-   	 	  _eventbrite_sboc_insert_attendees_to_db($_SESSION[EVENTBRITE_SBOC_ATTENDEES_TO_DB]); 
-   	   }
-   	   break;
-     case EVENTBRITE_SBOC_ATTENDEES_CHANGED:
-       $status = 'CHANGED';
-       if (!empty($_SESSION[EVENTBRITE_SBOC_ATTENDEES_TO_DB])){
-       	  _eventbrite_sboc_update_attendees_in_db($_SESSION[EVENTBRITE_SBOC_ATTENDEES_TO_DB]);
-       }	        	
-       break;
-   	 default:
-   	    break;  	
+   $db_rows_to_save = $_SESSION[EVENTBRITE_SBOC_ATTENDEES_TO_DB];
+   if (!empty($db_rows_to_save)){
+   	  switch ($dataset_type) {
+        case EVENTBRITE_SBOC_ATTENDEES_NEW:
+       	  $status = 'NEW';	
+       	  _eventbrite_sboc_insert_attendees_to_db($db_rows_to_save); 	   	   
+   	      break;
+     	case EVENTBRITE_SBOC_ATTENDEES_CHANGED:
+       	  $status = 'CHANGED';
+          _eventbrite_sboc_update_attendees_in_db($db_rows_to_save);
+          break;
+   	    default:
+   	      break;  	
+     }
    }
+   
    watchdog(EVENTBRITE_SBOC_MODULE_NAME, t('@ctr @status record(s) received.'),  
         		array('@ctr' => $ctr, '@status' => $status,), WATCHDOG_INFO);   
+        		
    $update_log = TRUE;
    if ($email_count == 0) {
       $update_log = ($debug_mode && (variable_get('eventbrite_sboc_log_zero_counts', 0) == 1));

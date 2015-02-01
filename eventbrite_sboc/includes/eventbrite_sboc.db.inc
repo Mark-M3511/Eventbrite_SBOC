@@ -73,7 +73,8 @@
    		   	'email_sent' => $row->email_sent,
    		   	'email_send_date' => $row->email_send_date,
    		   	'category' => $row->category,
-   		   	'additional_info' => $row->additional_info, );
+   		   	'additional_info' => $row->additional_info, 
+   		   	);
    		}   		
    }catch (Exception $e){		
 		watchdog(EVENTBRITE_SBOC_MODULE_NAME, t($e->getMessage()), array(), WATCHDOG_ERROR);   		
@@ -229,10 +230,7 @@
     if (!$a){
        return;
     }
-    
- 	// $timestamp = _eventbrite_sboc_get_timestamp();
-// 	$a->email_sent = 1;
-// 	$a->email_send_date = $timestamp;
+
 	$_SESSION[EVENTBRITE_SBOC_ATTENDEES_TO_DB][] = array(
 		'event_id' => $a->event_id,
 		'attendee_id' => $a->id,
@@ -498,7 +496,7 @@ function _eventbrite_sboc_get_change_date_from_db($rows, $a){
  * @param String
  *   Field name to be retrieved
  * @return String result
- *	 Date as a string
+ *	 Data as a string
  */
 function _eventbrite_sboc_get_field_value_from_db($rows, $a, $field_name){
    	$result = '';
@@ -512,3 +510,37 @@ function _eventbrite_sboc_get_field_value_from_db($rows, $a, $field_name){
    	}					
    	return $result;
  }
+ 
+ /**
+ * @Database
+ * Function _eventbrite_sboc_get_cached_record_by_attendee_id
+ *   Retrieves change date for attendee record id from database
+ * @param Array rows
+ *  Array of attendee rows from database
+ * @param Object a
+ *	 Attendee record to be matched using Attendee Id
+ * @param String
+ *   Field name to be retrieved
+ * @return Object result
+ *	 Registration record as Object
+ */
+function _eventbrite_sboc_get_cached_record_by_attendee_id($rows, $a){
+   	$result = null;
+   	foreach($rows as $key => $row) {
+   		if ($a->id == $key){
+   			$result = new StdClass;
+   			$result->attendee_id = $key;
+   			$result->event_id = $row['event_id'];
+   			$result->create_date = $row['create_date'];
+   			$result->change_date = $row['change_date'];
+   			$result->order_id = $row['order_id'];
+   			$result->email_address = $row['email_address'];
+   			$result->email_send_date = $row['email_send_date'];
+   			$result->email_sent = $row['email_sent'];
+   			$result->category = $row['category'];
+  			$result->additional_info = $row['additional_info'];
+   			break;
+   		}
+   	}					
+   	return $result;
+ } 
