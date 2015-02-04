@@ -20,4 +20,4 @@ dependencies[] = mimemail
 stylesheets[all][] = css/eventbrite_sboc_style.css
 
 ;Version Info
-version = '7.x-1.15-u15'
+version = '7.x-1.15-u16'

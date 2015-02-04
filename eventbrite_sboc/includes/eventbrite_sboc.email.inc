@@ -63,9 +63,10 @@ function _eventbrite_sboc_email_auto_sender($data){
    $ctr = $email_count = 0;
    $debug_limit = variable_get('eventbrite_sboc_app_debug_send_limit', 1);
    $debug_mode = (variable_get('eventbrite_sboc_app_debug', 0) == 1);
-   
+   $status = 'NEW';
    if ($dataset_type == EVENTBRITE_SBOC_ATTENDEES_CHANGED){
    	  $dataset_type_count = EVENTBRITE_SBOC_ATTENDEES_CHANGED_COUNT;
+   	  $status = 'CHANGED';	
    }		
 
    _eventbrite_sboc_cache_attendee_records_to_db();
@@ -103,16 +104,13 @@ function _eventbrite_sboc_email_auto_sender($data){
 		if ($record_changed){
 		   $ctr++;
 	   
-		   $prev_email =  $db_attendee_row->email_address;
-		   $prev_category = $db_attendee_row->category;
-		   $prev_additional_info = $db_attendee_row->additional_info;
 		   $a->email_sent = $db_attendee_row->email_sent;
 		   $a->email_send_date = $db_attendee_row->email_send_date;		   
 			
-		   $data_test = ($a->email != $prev_email || $a->additional_info != $prev_additional_info);
+		   $data_test = ($a->email != $db_attendee_row->email_address || $a->additional_info != $db_attendee_row->additional_info);
 		
 		   if ($a->order_type != EVENTBRITE_SBOC_ORDER_STATUS_PP_COMPLETED){
-			  $data_test = ($data_test || ($a->category != $prev_category));
+			  $data_test = ($data_test || ($a->category != $db_attendee_row->category));
 		   }
 		   
 		   $order_type = drupal_strtoupper($a->order_type);
@@ -159,22 +157,20 @@ function _eventbrite_sboc_email_auto_sender($data){
    }
    $_SESSION[EVENTBRITE_SBOC_EMAIL_COUNT] += $email_count;
    $_SESSION[$dataset_type_count] = $ctr;
-
-   $status = 'UNKNOWN';	
+   
    $db_rows_to_save = $_SESSION[EVENTBRITE_SBOC_ATTENDEES_TO_DB];
+   
    if (!empty($db_rows_to_save)){
-   	  switch ($dataset_type) {
-        case EVENTBRITE_SBOC_ATTENDEES_NEW:
-       	  $status = 'NEW';	
-       	  _eventbrite_sboc_insert_attendees_to_db($db_rows_to_save); 	   	   
-   	      break;
-     	case EVENTBRITE_SBOC_ATTENDEES_CHANGED:
-       	  $status = 'CHANGED';
-          _eventbrite_sboc_update_attendees_in_db($db_rows_to_save);
-          break;
-   	    default:
-   	      break;  	
-     }
+      switch($dataset_type){
+      	case EVENTBRITE_SBOC_ATTENDEES_NEW:
+      	  _eventbrite_sboc_insert_attendees_to_db($db_rows_to_save); 	   	    	
+      	  break;
+      	case EVENTBRITE_SBOC_ATTENDEES_CHANGED:
+      	  _eventbrite_sboc_update_attendees_in_db($db_rows_to_save);
+      	  break;
+      	default:
+      	  break;
+      }
    }
    
    watchdog(EVENTBRITE_SBOC_MODULE_NAME, t('@ctr @status record(s) received.'),  
@@ -186,7 +182,7 @@ function _eventbrite_sboc_email_auto_sender($data){
    }   
    if ($update_log){
    	  watchdog(EVENTBRITE_SBOC_MODULE_NAME, 
-   	  	t('Processed @count designated @status attendee record(s). @email_count email(s) sent.'), 
+   	  	t('Processed @count @status attendee record(s). @email_count email(s) sent.'), 
    		array('@count' => $ctr, '@status' => $status, '@email_count' => $email_count,), WATCHDOG_INFO);	
    }
    

@@ -49,6 +49,9 @@
    $eb_attendee_list = new StdClass;
    try{
    	 $eb_attendee_list = $eb_client->event_list_attendees($event_params); 	
+   	 if (!$eb_attendee_list || count($eb_attendee_list->attendees) == 0) {
+   	 	throw new Exception('Attendee list is empty or Eventlist object could not be used.');
+   	 }
      usort($eb_attendee_list->attendees, '_eventbrite_sboc_sort_attendees_by_create_date');
    }catch(Exception $e){
        $eb_attendee_list->attendees = array();
